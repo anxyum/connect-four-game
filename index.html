@@ -18,7 +18,7 @@
     <title>Document</title>
   </head>
   <body>
-    <div class="main-menu-screen">
+    <div class="main-menu-screen hidden">
       <main class="main-menu">
         <svg
           class="main-menu__icons"
@@ -207,9 +207,7 @@
         </svg>
 
         <ul class="main-menu-buttons">
-          <li
-            class="main-menu-buttons__button main-menu-buttons__button--primary"
-          >
+          <li class="button main-menu-buttons__button--primary">
             PLAY VS PLAYER
             <svg
               class="main-menu-buttons__player-vs-player-icon"
@@ -279,9 +277,7 @@
               </g>
             </svg>
           </li>
-          <li
-            class="main-menu-buttons__button main-menu-buttons__button--secondary"
-          >
+          <li class="button main-menu-buttons__button--secondary">
             GAME RULES
           </li>
         </ul>
@@ -323,7 +319,7 @@
             </li>
           </ol>
         </div>
-        <button class="rules__goback-button">
+        <button class="button rules__goback-button">
           <svg
             width="34"
             height="24"
@@ -340,9 +336,9 @@
         </button>
       </main>
     </div>
-    <div class="game-screen hidden">
+    <div class="game-screen">
       <ul class="game-screen-grid">
-        <ul class="game-screen-grid-column">
+        <ul class="game-screen-grid-column" data-column-id="0">
           <svg
             class="game-screen-player-pointer"
             width="38"
@@ -407,7 +403,7 @@
           <li class="game-screen-grid__cell"></li>
           <li class="game-screen-grid__cell"></li>
         </ul>
-        <ul class="game-screen-grid-column">
+        <ul class="game-screen-grid-column" data-column-id="1">
           <svg
             class="game-screen-player-pointer"
             width="38"
@@ -472,7 +468,7 @@
           <li class="game-screen-grid__cell"></li>
           <li class="game-screen-grid__cell"></li>
         </ul>
-        <ul class="game-screen-grid-column">
+        <ul class="game-screen-grid-column" data-column-id="2">
           <svg
             class="game-screen-player-pointer"
             width="38"
@@ -537,7 +533,7 @@
           <li class="game-screen-grid__cell"></li>
           <li class="game-screen-grid__cell"></li>
         </ul>
-        <ul class="game-screen-grid-column">
+        <ul class="game-screen-grid-column" data-column-id="3">
           <svg
             class="game-screen-player-pointer"
             width="38"
@@ -602,7 +598,7 @@
           <li class="game-screen-grid__cell"></li>
           <li class="game-screen-grid__cell"></li>
         </ul>
-        <ul class="game-screen-grid-column">
+        <ul class="game-screen-grid-column" data-column-id="4">
           <svg
             class="game-screen-player-pointer"
             width="38"
@@ -667,7 +663,7 @@
           <li class="game-screen-grid__cell"></li>
           <li class="game-screen-grid__cell"></li>
         </ul>
-        <ul class="game-screen-grid-column">
+        <ul class="game-screen-grid-column" data-column-id="5">
           <svg
             class="game-screen-player-pointer"
             width="38"
@@ -732,7 +728,7 @@
           <li class="game-screen-grid__cell"></li>
           <li class="game-screen-grid__cell"></li>
         </ul>
-        <ul class="game-screen-grid-column">
+        <ul class="game-screen-grid-column" data-column-id="6">
           <svg
             class="game-screen-player-pointer"
             width="38"
@@ -799,5 +795,6 @@
         </ul>
       </ul>
     </div>
+    <script src="./js/script.js"></script>
   </body>
 </html>
