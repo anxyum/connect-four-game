@@ -6,18 +6,56 @@ const $rulesButton = document.querySelector(
 );
 const $rulesCloseButton = document.querySelector(".rules__close-button");
 
-const $grid = document.querySelectorAll(".game-screen-grid-column");
+const $grid = document.querySelector(".game-screen-grid");
+
+// créer la grille
+for (let i = 0; i < 7; i++) {
+  const $column = document.createElement("ul");
+  $column.setAttribute("data-column-id", i);
+  $column.classList.add("game-screen-grid-column");
+  for (let j = 0; j < 6; j++) {
+    const $cell = document.createElement("li");
+    $cell.innerHTML =
+      '<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" > <g id="Oval Copy 43" filter="url(#filter0_i_5_6369)"> <circle cx="32" cy="32" r="32" /> </g> <defs> <filter id="filter0_i_5_6369" x="0" y="0" width="64" height="64" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB" > <feFlood flood-opacity="0" result="BackgroundImageFix" /> <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" /> <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha" /> <feOffset dy="5" /> <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1" /> <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0" /> <feBlend mode="normal" in2="shape" result="effect1_innerShadow_5_6369" /> </filter> </defs> </svg>';
+    $cell.classList.add("game-screen-grid__cell");
+    $column.appendChild($cell);
+  }
+  $grid.appendChild($column);
+}
+
+const $gridColumns = document.querySelectorAll(".game-screen-grid-column");
+
 const $playerPointer = document.querySelector(".game-screen-player-pointer");
+const $ingameMenuButton = document.querySelector(
+  ".game-screen-header-button__menu"
+);
+const $restartButton = document.querySelector(
+  ".game-screen-header-button__restart"
+);
+
+const $ingameMenuContinueButton = document.querySelector(
+  ".ingame-menu-button__continue"
+);
+const $ingameMenuRestartButton = document.querySelector(
+  ".ingame-menu-button__restart"
+);
+const $ingameMenuQuitButton = document.querySelector(
+  ".ingame-menu-button__quit"
+);
 
 // console.log($playVsPlayerButton);
 // console.log($rulesButton);
 // console.log($rulesCloseButton);
+
 // console.log($grid);
 // console.log($playerPointer);
+// console.log($ingameMenuButton);
+// console.log($restartButton);
 
 const defaultGrid = [[], [], [], [], [], [], []];
 let gameGrid = structuredClone(defaultGrid);
 let currentPlayer = 1;
+let firstPlayer = 1;
 
 function redrawGrid(grid) {
   for (let i = 0; i < grid.length; i++) {
@@ -27,9 +65,15 @@ function redrawGrid(grid) {
 
 function drawColumn(grid, columnId) {
   const column = grid[columnId];
-  const $columnCells = $grid[columnId].querySelectorAll(
+  const $columnCells = $gridColumns[columnId].querySelectorAll(
     ".game-screen-grid__cell"
   );
+  $columnCells.forEach(($cell) => {
+    $cell.classList.remove(
+      "game-screen-grid__cell--red",
+      "game-screen-grid__cell--yellow"
+    );
+  });
   for (let i = 0; i < column.length; i++) {
     $columnCells[5 - i].classList.add(
       {
@@ -139,40 +183,69 @@ function resetGame() {
   updatePlayerPointer(currentPlayer);
 }
 
-$playVsPlayerButton.addEventListener("click", () => {
-  document.querySelector(".main-menu-screen").classList.add("hidden");
-  document.querySelector(".game-screen").classList.remove("hidden");
-  resetGame();
-});
+document.addEventListener("DOMContentLoaded", () => {
+  $playVsPlayerButton.addEventListener("click", () => {
+    document.querySelector(".main-menu-screen").classList.add("hidden");
+    document.querySelector(".game-screen").classList.remove("hidden");
+    resetGame();
+  });
 
-$rulesButton.addEventListener("click", () => {
-  document.querySelector(".main-menu-screen").classList.add("hidden");
-  document.querySelector(".rules-screen").classList.remove("hidden");
-});
+  $rulesButton.addEventListener("click", () => {
+    document.querySelector(".main-menu-screen").classList.add("hidden");
+    document.querySelector(".rules-screen").classList.remove("hidden");
+  });
 
-$rulesCloseButton.addEventListener("click", () => {
-  document.querySelector(".rules-screen").classList.add("hidden");
-  document.querySelector(".main-menu-screen").classList.remove("hidden");
-});
+  $rulesCloseButton.addEventListener("click", () => {
+    document.querySelector(".rules-screen").classList.add("hidden");
+    document.querySelector(".main-menu-screen").classList.remove("hidden");
+  });
 
-$grid.forEach(($column) => {
-  $column.addEventListener("click", () => {
-    const columnId = $column.getAttribute("data-column-id");
+  $ingameMenuButton.addEventListener("click", () => {
+    document.querySelector(".ingame-menu-screen").classList.remove("hidden");
+  });
 
-    if (gameGrid[columnId].length < 6) {
-      gameGrid[columnId].push(currentPlayer);
-      currentPlayer = -currentPlayer;
-    }
-    drawColumn(gameGrid, columnId);
-    console.log(checkWin(gameGrid));
+  $restartButton.addEventListener("click", () => {
+    resetGame();
+    currentPlayer = firstPlayer;
     updatePlayerPointer(currentPlayer);
   });
 
-  $column.addEventListener("mouseenter", () => {
-    $playerPointer.style.left = `${
-      $column.offsetLeft +
-      $column.clientWidth / 2 -
-      $playerPointer.clientWidth / 2
-    }px`;
+  $ingameMenuContinueButton.addEventListener("click", () => {
+    document.querySelector(".ingame-menu-screen").classList.add("hidden");
+  });
+
+  $ingameMenuRestartButton.addEventListener("click", () => {
+    resetGame();
+    currentPlayer = firstPlayer;
+    updatePlayerPointer(currentPlayer);
+    document.querySelector(".ingame-menu-screen").classList.add("hidden");
+  });
+
+  $ingameMenuQuitButton.addEventListener("click", () => {
+    document.querySelector(".ingame-menu-screen").classList.add("hidden");
+    document.querySelector(".game-screen").classList.add("hidden");
+    document.querySelector(".main-menu-screen").classList.remove("hidden");
+  });
+
+  $gridColumns.forEach(($column) => {
+    $column.addEventListener("click", () => {
+      const columnId = $column.getAttribute("data-column-id");
+
+      if (gameGrid[columnId].length < 6) {
+        gameGrid[columnId].push(currentPlayer);
+        currentPlayer = -currentPlayer;
+      }
+      drawColumn(gameGrid, columnId);
+      console.log(checkWin(gameGrid));
+      updatePlayerPointer(currentPlayer);
+    });
+
+    $column.addEventListener("mouseenter", () => {
+      $playerPointer.style.left = `${
+        $column.offsetLeft +
+        $column.clientWidth / 2 -
+        $playerPointer.clientWidth / 2
+      }px`;
+    });
   });
 });

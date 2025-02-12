@@ -185,15 +185,90 @@ ul {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-direction: row;
   width: 632px;
   margin-top: 48px;
 }
 
-.game-screen-grid {
+.game-screen-header-section {
+  width: 30%;
+  display: flex;
+}
+
+.game-screen-header-button {
+  background-color: var(--dark-purple);
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-family: Space Grotesk;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--white);
+  border: none;
+}
+
+.game-screen-header-button:hover {
+  background-color: var(--red);
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.game-screen-header-icons {
+  margin: 0 auto;
+}
+
+.game-screen-header-button__restart {
+  margin-right: 0;
+  margin-left: auto;
+}
+
+.game-screen-middle-section {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 60px;
   position: absolute;
   bottom: 20%;
-  transform: translateY(40px);
+  z-index: 1;
+}
+
+.game-screen-player-points {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 28px;
+  padding-top: 48px;
+  background-color: var(--white);
+  border: 3px solid #000000;
+  box-shadow: 0px 10px 0px 0px #000000;
+  border-radius: 20px;
+}
+
+.game-screen-player-points-icon {
+  position: absolute;
+  top: 0;
+  transform: translateY(-50%);
+}
+
+.game-screen-player-points-player {
+  font-family: Space Grotesk;
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 25.52px;
+  letter-spacing: 0px;
+  text-align: center;
+}
+
+.game-screen-player-points-score {
+  font-family: Space Grotesk;
+  font-weight: 700;
+  font-size: 56px;
+  line-height: 71.46px;
+  letter-spacing: 0px;
+  text-align: center;
+}
+
+.game-screen-grid {
   display: flex;
   flex-direction: row;
   background-color: var(--white);
@@ -202,13 +277,14 @@ ul {
   padding-bottom: 60px;
   border-radius: 40px;
   border: 3px solid var(--black);
-  z-index: 100;
+  transform: translateY(40px);
 }
 
 .game-screen-grid-column {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  cursor: pointer;
 }
 
 .game-screen-player-pointer {
@@ -254,4 +330,58 @@ ul {
   position: absolute;
   bottom: 0px;
   border-radius: 60px 60px 0 0;
+}
+
+.ingame-menu-screen {
+  position: absolute;
+  left: 0;
+  top: 0;
+  background-color: #00000080;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ingame-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+  background-color: var(--purple);
+  border-radius: 40px;
+  border: 3px solid #000000;
+  box-shadow: 0px 10px 0px 0px #000000;
+  width: 480px;
+  padding: 48px 40px;
+}
+
+.ingame-menu-title {
+  font-family: Space Grotesk;
+  font-size: 56px;
+  color: var(--white);
+  margin: 0;
+}
+
+.ingame-menu-buttons {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ingame-menu-button {
+  width: 100%;
+  background-color: var(--white);
+  font-family: Space Grotesk;
+  font-size: 24px;
+  text-align: center;
+}
+
+.ingame-menu-button__quit {
+  background-color: var(--red);
+  color: var(--white);
 }
