@@ -1,4 +1,3 @@
-const $grid = document.querySelectorAll(".game-screen-grid-column");
 const $playVsPlayerButton = document.querySelector(
   ".main-menu-buttons__button--primary"
 );
@@ -7,27 +6,17 @@ const $rulesButton = document.querySelector(
 );
 const $rulesCloseButton = document.querySelector(".rules__close-button");
 
+const $grid = document.querySelectorAll(".game-screen-grid-column");
+const $playerPointer = document.querySelector(".game-screen-player-pointer");
+
+// console.log($playVsPlayerButton);
+// console.log($rulesButton);
+// console.log($rulesCloseButton);
 // console.log($grid);
-// console.log(playVsPlayerButton);
-// console.log(rulesButton);
+// console.log($playerPointer);
 
-$playVsPlayerButton.addEventListener("click", () => {
-  document.querySelector(".main-menu-screen").classList.add("hidden");
-  document.querySelector(".game-screen").classList.remove("hidden");
-  redrawGrid(gameGrid);
-});
-
-$rulesButton.addEventListener("click", () => {
-  document.querySelector(".main-menu-screen").classList.add("hidden");
-  document.querySelector(".rules-screen").classList.remove("hidden");
-});
-
-$rulesCloseButton.addEventListener("click", () => {
-  document.querySelector(".rules-screen").classList.add("hidden");
-  document.querySelector(".main-menu-screen").classList.remove("hidden");
-});
-
-let gameGrid = [[], [], [], [], [], [], []];
+const defaultGrid = [[], [], [], [], [], [], []];
+let gameGrid = structuredClone(defaultGrid);
 let currentPlayer = 1;
 
 function redrawGrid(grid) {
@@ -53,20 +42,6 @@ function drawColumn(grid, columnId) {
 
 function checkWin(grid) {
   let perfCounter = 0;
-  // verifie les colonnes
-  for (let i = 0; i < grid.length; i++) {
-    const column = grid[i];
-    if (column.length < 4) continue;
-    for (let j = 0; j < column.length - 3; j++) {
-      perfCounter++;
-      if (
-        column[j] === column[j + 1] &&
-        column[j + 1] === column[j + 2] &&
-        column[j + 2] === column[j + 3]
-      )
-        return column[j] + 2;
-    }
-  }
 
   // verifie les lignes
   for (let i = 0; i < grid[3].length; i++) {
@@ -92,11 +67,27 @@ function checkWin(grid) {
     }
   }
 
-  // verifie les diagonales
   const gridHeight = Math.max(...grid.map((column) => column.length));
   if (gridHeight < 4) return -1;
-  for (let i = 0; i < gridHeight - 3; i++) {
-    for (let j = 0; j < 4; j++) {
+
+  // verifie les colonnes
+  for (let i = 0; i < grid.length; i++) {
+    const column = grid[i];
+    if (column.length < 4) continue;
+    for (let j = 0; j < column.length - 3; j++) {
+      perfCounter++;
+      if (
+        column[j] === column[j + 1] &&
+        column[j + 1] === column[j + 2] &&
+        column[j + 2] === column[j + 3]
+      )
+        return column[j] + 2;
+    }
+  }
+
+  // verifie les diagonales
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < gridHeight - 3; j++) {
       perfCounter++;
       if (
         grid[i][j] &&
@@ -104,12 +95,12 @@ function checkWin(grid) {
         grid[i + 1][j + 1] === grid[i + 2][j + 2] &&
         grid[i + 2][j + 2] === grid[i + 3][j + 3]
       ) {
-        return grid[j][i] + 2;
+        return grid[i][j] + 2;
       }
     }
   }
-  for (let i = 0; i < gridHeight - 3; i++) {
-    for (let j = 3; j < 7; j++) {
+  for (let i = 0; i < 4; i++) {
+    for (let j = 3; j < gridHeight; j++) {
       perfCounter++;
       if (
         grid[i][j] &&
@@ -117,7 +108,7 @@ function checkWin(grid) {
         grid[i + 1][j - 1] === grid[i + 2][j - 2] &&
         grid[i + 2][j - 2] === grid[i + 3][j - 3]
       ) {
-        return grid[j][i] + 2;
+        return grid[i][j] + 2;
       }
     }
   }
@@ -126,6 +117,43 @@ function checkWin(grid) {
 
   return -1;
 }
+
+function updatePlayerPointer(player) {
+  $playerPointer.classList.remove(
+    {
+      1: "game-screen-player-pointer--yellow",
+      "-1": "game-screen-player-pointer--red",
+    }[player]
+  );
+  $playerPointer.classList.add(
+    {
+      1: "game-screen-player-pointer--red",
+      "-1": "game-screen-player-pointer--yellow",
+    }[player]
+  );
+}
+
+function resetGame() {
+  gameGrid = structuredClone(defaultGrid);
+  redrawGrid(gameGrid);
+  updatePlayerPointer(currentPlayer);
+}
+
+$playVsPlayerButton.addEventListener("click", () => {
+  document.querySelector(".main-menu-screen").classList.add("hidden");
+  document.querySelector(".game-screen").classList.remove("hidden");
+  resetGame();
+});
+
+$rulesButton.addEventListener("click", () => {
+  document.querySelector(".main-menu-screen").classList.add("hidden");
+  document.querySelector(".rules-screen").classList.remove("hidden");
+});
+
+$rulesCloseButton.addEventListener("click", () => {
+  document.querySelector(".rules-screen").classList.add("hidden");
+  document.querySelector(".main-menu-screen").classList.remove("hidden");
+});
 
 $grid.forEach(($column) => {
   $column.addEventListener("click", () => {
@@ -137,5 +165,14 @@ $grid.forEach(($column) => {
     }
     drawColumn(gameGrid, columnId);
     console.log(checkWin(gameGrid));
+    updatePlayerPointer(currentPlayer);
+  });
+
+  $column.addEventListener("mouseenter", () => {
+    $playerPointer.style.left = `${
+      $column.offsetLeft +
+      $column.clientWidth / 2 -
+      $playerPointer.clientWidth / 2
+    }px`;
   });
 });

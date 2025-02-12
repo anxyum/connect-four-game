@@ -176,15 +176,24 @@ ul {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   width: 100%;
   height: 100%;
   background-color: var(--purple);
 }
 
+.game-screen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-direction: row;
+  width: 632px;
+  margin-top: 48px;
+}
+
 .game-screen-grid {
-  position: relative;
-  bottom: -40px;
+  position: absolute;
+  bottom: 20%;
+  transform: translateY(40px);
   display: flex;
   flex-direction: row;
   background-color: var(--white);
@@ -203,11 +212,11 @@ ul {
 }
 
 .game-screen-player-pointer {
-  display: none;
   position: absolute;
   top: -40px;
   align-self: center;
   fill: var(--white);
+  transition: 0.2s;
 }
 
 .game-screen-player-pointer--red {
@@ -219,7 +228,7 @@ ul {
 }
 
 .game-screen-grid:hover .game-screen-player-pointer {
-  display: block;
+  top: -45px;
 }
 
 .game-screen-grid__cell {
@@ -244,4 +253,5 @@ ul {
   height: 20%;
   position: absolute;
   bottom: 0px;
+  border-radius: 60px 60px 0 0;
 }
