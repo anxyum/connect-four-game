@@ -22,16 +22,14 @@ for (let i = 0; i < 7; i++) {
   }
   $grid.appendChild($column);
 }
-
 const $gridColumns = document.querySelectorAll(".game-screen-grid-column");
 
 const $playerPointer = document.querySelector(".game-screen-player-pointer");
-const $ingameMenuButton = document.querySelector(
-  ".game-screen-header-button__menu"
+const $winnerIndicator = document.querySelector(
+  ".game-screen-winner-indicator"
 );
-const $restartButton = document.querySelector(
-  ".game-screen-header-button__restart"
-);
+const $ingameMenuButton = document.querySelector(".game-screen-button__menu");
+const $restartButton = document.querySelector(".game-screen-button__restart");
 
 const $ingameMenuContinueButton = document.querySelector(
   ".ingame-menu-button__continue"
@@ -41,6 +39,18 @@ const $ingameMenuRestartButton = document.querySelector(
 );
 const $ingameMenuQuitButton = document.querySelector(
   ".ingame-menu-button__quit"
+);
+const $playAgainButton = document.querySelector(
+  ".game-screen-winner__play-again"
+);
+const $playerClockContainer = document.querySelector(
+  ".game-screen-player-clock-container"
+);
+const $playerClock = document.querySelector(
+  ".game-screen-player-clock .game-screen-player-clock__clock"
+);
+const $playerClockPlayer = document.querySelector(
+  ".game-screen-player-clock-player"
 );
 
 // console.log($playVsPlayerButton);
@@ -52,10 +62,18 @@ const $ingameMenuQuitButton = document.querySelector(
 // console.log($ingameMenuButton);
 // console.log($restartButton);
 
+// console.log($ingameMenuContinueButton);
+// console.log($ingameMenuRestartButton);
+// console.log($ingameMenuQuitButton);
+// console.log($playAgainButton);
+// console.log($playerClockContainer);
+// console.log($playerClock);
+
 const defaultGrid = [[], [], [], [], [], [], []];
 let gameGrid = structuredClone(defaultGrid);
 let currentPlayer = 1;
 let firstPlayer = 1;
+let winner = 0;
 
 function redrawGrid(grid) {
   for (let i = 0; i < grid.length; i++) {
@@ -162,7 +180,7 @@ function checkWin(grid) {
   return -1;
 }
 
-function updatePlayerPointer(player) {
+function updatePlayerTurn(player) {
   $playerPointer.classList.remove(
     {
       1: "game-screen-player-pointer--yellow",
@@ -175,12 +193,52 @@ function updatePlayerPointer(player) {
       "-1": "game-screen-player-pointer--yellow",
     }[player]
   );
+  $playerClockContainer.classList.remove(
+    {
+      "-1": "game-screen-player-clock-container--red",
+      1: "game-screen-player-clock-container--yellow",
+    }[player]
+  );
+  $playerClockContainer.classList.add(
+    {
+      1: "game-screen-player-clock-container--red",
+      "-1": "game-screen-player-clock-container--yellow",
+    }[player]
+  );
+}
+
+function resetGrid() {
+  gameGrid = structuredClone(defaultGrid);
+  redrawGrid(gameGrid);
+  updatePlayerTurn(currentPlayer);
+  winner = 0;
+  $winnerIndicator.classList.remove("game-screen-winner-indicator--red");
+  $winnerIndicator.classList.remove("game-screen-winner-indicator--yellow");
+  document
+    .querySelector(".game-screen-winner-container")
+    .classList.add("hidden");
+  $playerClockContainer.classList.remove("hidden");
 }
 
 function resetGame() {
-  gameGrid = structuredClone(defaultGrid);
-  redrawGrid(gameGrid);
-  updatePlayerPointer(currentPlayer);
+  resetGrid();
+  firstPlayer = 1;
+  currentPlayer = firstPlayer;
+  updatePlayerTurn(currentPlayer);
+
+  let $truc1 = document.querySelector(
+    ".game-screen-player-points--player-two .game-screen-player-points-score"
+  );
+  $truc1.textContent = 0;
+
+  let $truc2 = document.querySelector(
+    ".game-screen-player-points--player-one .game-screen-player-points-score"
+  );
+  $truc2.textContent = 0;
+
+  document
+    .querySelector(".game-screen-winner-container")
+    .classList.add("hidden");
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -205,9 +263,9 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   $restartButton.addEventListener("click", () => {
-    resetGame();
+    resetGrid();
     currentPlayer = firstPlayer;
-    updatePlayerPointer(currentPlayer);
+    updatePlayerTurn(currentPlayer);
   });
 
   $ingameMenuContinueButton.addEventListener("click", () => {
@@ -217,7 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $ingameMenuRestartButton.addEventListener("click", () => {
     resetGame();
     currentPlayer = firstPlayer;
-    updatePlayerPointer(currentPlayer);
+    updatePlayerTurn(currentPlayer);
     document.querySelector(".ingame-menu-screen").classList.add("hidden");
   });
 
@@ -227,8 +285,16 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelector(".main-menu-screen").classList.remove("hidden");
   });
 
+  $playAgainButton.addEventListener("click", () => {
+    document
+      .querySelector(".game-screen-winner-container")
+      .classList.add("hidden");
+    resetGrid();
+  });
+
   $gridColumns.forEach(($column) => {
     $column.addEventListener("click", () => {
+      if (winner > 0) return;
       const columnId = $column.getAttribute("data-column-id");
 
       if (gameGrid[columnId].length < 6) {
@@ -236,8 +302,53 @@ document.addEventListener("DOMContentLoaded", () => {
         currentPlayer = -currentPlayer;
       }
       drawColumn(gameGrid, columnId);
-      console.log(checkWin(gameGrid));
-      updatePlayerPointer(currentPlayer);
+      winner = checkWin(gameGrid);
+      console.log(winner);
+      if (winner > 0) {
+        $winnerIndicator.classList.add(
+          {
+            1: "game-screen-winner-indicator--yellow",
+            3: "game-screen-winner-indicator--red",
+          }[winner]
+        );
+
+        document.querySelector(".game-screen-winner").textContent = {
+          3: "PLAYER 1",
+          1: "PLAYER 2",
+        }[winner];
+
+        truc1 = {
+          1: () => {
+            let $truc2 = document.querySelector(
+              ".game-screen-player-points--player-two .game-screen-player-points-score"
+            );
+            $truc2.textContent = parseInt($truc2.textContent) + 1;
+          },
+          3: () => {
+            let $truc2 = document.querySelector(
+              ".game-screen-player-points--player-one .game-screen-player-points-score"
+            );
+            $truc2.textContent = parseInt($truc2.textContent) + 1;
+          },
+        };
+
+        truc1[winner]();
+
+        $playerClockContainer.classList.add("hidden");
+        console.log("winner");
+        document
+          .querySelector(".game-screen-winner-container")
+          .classList.remove("hidden");
+      } else if (winner === 0) {
+        document.querySelector(".game-screen-winner").textContent = "NOBODY";
+        $playerClockContainer.classList.add("hidden");
+
+        document
+          .querySelector(".game-screen-winner-container")
+          .classList.remove("hidden");
+      }
+
+      updatePlayerTurn(currentPlayer);
     });
 
     $column.addEventListener("mouseenter", () => {

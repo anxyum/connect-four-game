@@ -11,6 +11,10 @@
   display: none !important;
 }
 
+html {
+  user-select: none;
+}
+
 body {
   height: 100vh;
 }
@@ -194,7 +198,7 @@ ul {
   display: flex;
 }
 
-.game-screen-header-button {
+.game-screen-button {
   background-color: var(--dark-purple);
   padding: 8px 20px;
   border-radius: 20px;
@@ -205,7 +209,7 @@ ul {
   border: none;
 }
 
-.game-screen-header-button:hover {
+.game-screen-button:hover {
   background-color: var(--red);
   cursor: pointer;
   transition: 0.2s;
@@ -215,7 +219,7 @@ ul {
   margin: 0 auto;
 }
 
-.game-screen-header-button__restart {
+.game-screen-button__restart {
   margin-right: 0;
   margin-left: auto;
 }
@@ -272,12 +276,12 @@ ul {
   display: flex;
   flex-direction: row;
   background-color: var(--white);
-  gap: 18px;
-  padding: 20px;
+  padding: 20px 11px;
   padding-bottom: 60px;
   border-radius: 40px;
   border: 3px solid var(--black);
   transform: translateY(40px);
+  box-shadow: 0px 10px 0px 0px var(--black);
 }
 
 .game-screen-grid-column {
@@ -285,6 +289,7 @@ ul {
   flex-direction: column;
   gap: 18px;
   cursor: pointer;
+  padding: 0 9px;
 }
 
 .game-screen-player-pointer {
@@ -330,6 +335,92 @@ ul {
   position: absolute;
   bottom: 0px;
   border-radius: 60px 60px 0 0;
+  transition: 1s;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.game-screen-winner-indicator--red {
+  background-color: var(--red);
+}
+
+.game-screen-winner-indicator--yellow {
+  background-color: var(--yellow);
+}
+
+.game-screen-winner-container {
+  background-color: var(--white);
+  z-index: 1;
+  padding: 16px 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 3px solid var(--black);
+  box-shadow: 0px 10px 0px 0px var(--black);
+  border-radius: 20px;
+}
+
+.game-screen-winner {
+  font-family: Space Grotesk;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 20.42px;
+  letter-spacing: 0px;
+  text-align: center;
+}
+
+.game-screen-winner-winner {
+  font-family: Space Grotesk;
+  font-weight: 700;
+  font-size: 56px;
+  line-height: 71.46px;
+  letter-spacing: 0px;
+  text-align: center;
+}
+
+.game-screen-player-clock-container {
+  z-index: 1;
+  position: relative;
+  padding-top: 40px;
+}
+
+.game-screen-player-clock-container svg {
+  fill: var(--white);
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: none;
+  z-index: -1;
+}
+
+.game-screen-player-clock-container--red {
+  color: var(--white);
+}
+
+.game-screen-player-clock-container--red svg {
+  fill: var(--red);
+}
+
+.game-screen-player-clock-container--yellow svg {
+  fill: var(--yellow);
+}
+
+.game-screen-player-clock-player {
+  font-family: Space Grotesk;
+  font-weight: 700;
+  font-size: 16px;
+  text-align: center;
+  margin-top: 4px;
+  color: inherit;
+}
+
+.game-screen-player-clock {
+  font-family: Space Grotesk;
+  font-weight: 700;
+  font-size: 56px;
+  text-align: center;
 }
 
 .ingame-menu-screen {
