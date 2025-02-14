@@ -16,7 +16,7 @@ for (let i = 0; i < 7; i++) {
   for (let j = 0; j < 6; j++) {
     const $cell = document.createElement("li");
     $cell.innerHTML =
-      '<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" > <g id="Oval Copy 43" filter="url(#filter0_i_5_6369)"> <circle cx="32" cy="32" r="32" /> </g> <defs> <filter id="filter0_i_5_6369" x="0" y="0" width="64" height="64" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB" > <feFlood flood-opacity="0" result="BackgroundImageFix" /> <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" /> <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha" /> <feOffset dy="5" /> <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1" /> <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0" /> <feBlend mode="normal" in2="shape" result="effect1_innerShadow_5_6369" /> </filter> </defs> </svg>';
+      '<div class="game-screen-grid__cell-wrapper"><svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" > <g id="Oval Copy 43" filter="url(#filter0_i_5_6369)"> <circle cx="32" cy="32" r="32" /> </g> <defs> <filter id="filter0_i_5_6369" x="0" y="0" width="64" height="64" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB" > <feFlood flood-opacity="0" result="BackgroundImageFix" /> <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" /> <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha" /> <feOffset dy="5" /> <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1" /> <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0" /> <feBlend mode="normal" in2="shape" result="effect1_innerShadow_5_6369" /> </filter> </defs> </svg></div>';
     $cell.classList.add("game-screen-grid__cell");
     $column.appendChild($cell);
   }
@@ -109,24 +109,14 @@ function checkWin(grid) {
 
   // verifie les lignes
   for (let i = 0; i < grid[3].length; i++) {
-    const line = [
-      grid[0][i] || 0,
-      grid[1][i] || 0,
-      grid[2][i] || 0,
-      grid[3][i] || 0,
-      grid[4][i] || 0,
-      grid[5][i] || 0,
-      grid[6][i] || 0,
-    ];
-
     for (let j = 0; j < 4; j++) {
       perfCounter++;
       if (
-        line[j] === line[j + 1] &&
-        line[j + 1] === line[j + 2] &&
-        line[j + 2] === line[j + 3]
+        grid[j][i] === grid[j + 1][i] &&
+        grid[j + 1][i] === grid[j + 2][i] &&
+        grid[j + 2][i] === grid[j + 3][i]
       ) {
-        return line[j] + 2;
+        return grid[j][i] + 2;
       }
     }
   }
@@ -180,6 +170,89 @@ function checkWin(grid) {
   if (grid.flat().length === 42) return 0;
 
   return -1;
+}
+
+function findWin(grid) {
+  let perfCounter = 0;
+
+  // verifie les lignes
+  for (let i = 0; i < grid[3].length; i++) {
+    for (let j = 0; j < 4; j++) {
+      perfCounter++;
+      if (
+        grid[j][i] === grid[j + 1][i] &&
+        grid[j + 1][i] === grid[j + 2][i] &&
+        grid[j + 2][i] === grid[j + 3][i]
+      ) {
+        return [
+          { x: j, y: i },
+          { x: j + 1, y: i },
+          { x: j + 2, y: i },
+          { x: j + 3, y: i },
+        ];
+      }
+    }
+  }
+
+  // verifie les colonnes
+  for (let i = 0; i < grid.length; i++) {
+    if (grid[i].length < 4) continue;
+    for (let j = 0; j < grid[i].length - 3; j++) {
+      perfCounter++;
+      if (
+        grid[i][j] === grid[i][j + 1] &&
+        grid[i][j + 1] === grid[i][j + 2] &&
+        grid[i][j + 2] === grid[i][j + 3]
+      )
+        return [
+          { x: i, y: j },
+          { x: i, y: j + 1 },
+          { x: i, y: j + 2 },
+          { x: i, y: j + 3 },
+        ];
+    }
+  }
+
+  // verifie les diagonales
+  const gridHeight = Math.max(...grid.map((column) => column.length));
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < gridHeight - 3; j++) {
+      perfCounter++;
+      if (
+        grid[i][j] &&
+        grid[i][j] === grid[i + 1][j + 1] &&
+        grid[i + 1][j + 1] === grid[i + 2][j + 2] &&
+        grid[i + 2][j + 2] === grid[i + 3][j + 3]
+      ) {
+        return [
+          { x: i, y: j },
+          { x: i + 1, y: j + 1 },
+          { x: i + 2, y: j + 2 },
+          { x: i + 3, y: j + 3 },
+        ];
+      }
+    }
+  }
+  for (let i = 0; i < 4; i++) {
+    for (let j = 3; j < gridHeight; j++) {
+      perfCounter++;
+      if (
+        grid[i][j] &&
+        grid[i][j] === grid[i + 1][j - 1] &&
+        grid[i + 1][j - 1] === grid[i + 2][j - 2] &&
+        grid[i + 2][j - 2] === grid[i + 3][j - 3]
+      ) {
+        return [
+          { x: i, y: j },
+          { x: i + 1, y: j - 1 },
+          { x: i + 2, y: j - 2 },
+          { x: i + 3, y: j - 3 },
+        ];
+      }
+    }
+  }
+
+  return [];
 }
 
 function updatePlayerPointer(player, columnId) {
@@ -310,6 +383,15 @@ function updateWinner(winner) {
     document
       .querySelector(".game-screen-winner-container")
       .classList.remove("hidden");
+
+    const cells = findWin(gameGrid);
+    cells.forEach((cell) => {
+      const $cell = $gridColumns[cell.x].querySelectorAll(
+        ".game-screen-grid__cell"
+      )[5 - cell.y];
+      console.log($cell);
+      $cell.innerHTML += `<div class="game-screen-grid__cell-wrapper"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="17" cy="17" r="14" stroke="white" stroke-width="6" fill="none"/></svg></div>`;
+    });
   } else if (winner === 0) {
     document.querySelector(".game-screen-winner").textContent = "NOBODY";
     $playerClockContainer.classList.add("hidden");
