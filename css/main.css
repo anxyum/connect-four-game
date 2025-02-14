@@ -383,6 +383,7 @@ ul {
   z-index: 1;
   position: relative;
   padding-top: 40px;
+  transition: 0.2s;
 }
 
 .game-screen-player-clock-container svg {

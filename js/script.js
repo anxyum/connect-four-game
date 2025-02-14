@@ -74,6 +74,8 @@ let gameGrid = structuredClone(defaultGrid);
 let currentPlayer = 1;
 let firstPlayer = 1;
 let winner = 0;
+const maxTurnTime = 30; // en secondes
+let pointerColumn = 0;
 
 function redrawGrid(grid) {
   for (let i = 0; i < grid.length; i++) {
@@ -180,7 +182,8 @@ function checkWin(grid) {
   return -1;
 }
 
-function updatePlayerTurn(player) {
+function updatePlayerPointer(player, columnId) {
+  const $column = $gridColumns[columnId];
   $playerPointer.classList.remove(
     {
       1: "game-screen-player-pointer--yellow",
@@ -193,6 +196,16 @@ function updatePlayerTurn(player) {
       "-1": "game-screen-player-pointer--yellow",
     }[player]
   );
+
+  $playerPointer.style.left = `${
+    $column.offsetLeft +
+    $column.clientWidth / 2 -
+    $playerPointer.clientWidth / 2
+  }px`;
+}
+
+function updatePlayerTurn(player) {
+  updatePlayerPointer(player, pointerColumn);
   $playerClockContainer.classList.remove(
     {
       "-1": "game-screen-player-clock-container--red",
@@ -205,6 +218,10 @@ function updatePlayerTurn(player) {
       "-1": "game-screen-player-clock-container--yellow",
     }[player]
   );
+  $playerClockPlayer.textContent = {
+    1: "PLAYER 1’S TURN",
+    "-1": "PLAYER 2’S TURN",
+  }[player];
 }
 
 function resetGrid() {
@@ -218,6 +235,7 @@ function resetGrid() {
     .querySelector(".game-screen-winner-container")
     .classList.add("hidden");
   $playerClockContainer.classList.remove("hidden");
+  resetPlayerClock();
 }
 
 function resetGame() {
@@ -241,7 +259,99 @@ function resetGame() {
     .classList.add("hidden");
 }
 
+function resetPlayerClock() {
+  $playerClock.textContent = maxTurnTime;
+  function countDown(s) {
+    if (s == $playerClock.textContent) {
+      if (s === 0) {
+        winner = -currentPlayer + 2;
+        updateWinner(winner);
+      }
+      setTimeout(countDown, 1000, s - 1);
+      $playerClock.textContent = $playerClock.textContent - 1;
+    }
+  }
+  setTimeout(countDown, 1000, maxTurnTime);
+}
+
+function updateWinner(winner) {
+  if (winner > 0) {
+    $winnerIndicator.classList.add(
+      {
+        1: "game-screen-winner-indicator--yellow",
+        3: "game-screen-winner-indicator--red",
+      }[winner]
+    );
+
+    document.querySelector(".game-screen-winner").textContent = {
+      3: "PLAYER 1",
+      1: "PLAYER 2",
+    }[winner];
+
+    truc1 = {
+      1: () => {
+        let $truc2 = document.querySelector(
+          ".game-screen-player-points--player-two .game-screen-player-points-score"
+        );
+        $truc2.textContent = parseInt($truc2.textContent) + 1;
+      },
+      3: () => {
+        let $truc2 = document.querySelector(
+          ".game-screen-player-points--player-one .game-screen-player-points-score"
+        );
+        $truc2.textContent = parseInt($truc2.textContent) + 1;
+      },
+    };
+
+    truc1[winner]();
+
+    $playerClockContainer.classList.add("hidden");
+    console.log("winner");
+    document
+      .querySelector(".game-screen-winner-container")
+      .classList.remove("hidden");
+  } else if (winner === 0) {
+    document.querySelector(".game-screen-winner").textContent = "NOBODY";
+    $playerClockContainer.classList.add("hidden");
+
+    document
+      .querySelector(".game-screen-winner-container")
+      .classList.remove("hidden");
+  }
+
+  if (winner >= 0) {
+    firstPlayer = -firstPlayer;
+    currentPlayer = firstPlayer;
+    updatePlayerTurn(currentPlayer);
+  }
+}
+
+function placeInColumn(column) {
+  if (winner > 0) return;
+  if (gameGrid[column].length < 6) {
+    gameGrid[column].push(currentPlayer);
+    currentPlayer = -currentPlayer;
+    resetPlayerClock();
+    drawColumn(gameGrid, column);
+    updatePlayerTurn(currentPlayer);
+    winner = checkWin(gameGrid);
+    updateWinner(winner);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft") {
+      pointerColumn = Math.max(pointerColumn - 1, 0);
+      updatePlayerPointer(currentPlayer, pointerColumn);
+    } else if (e.key === "ArrowRight") {
+      pointerColumn = Math.min(pointerColumn + 1, 6);
+      updatePlayerPointer(currentPlayer, pointerColumn);
+    } else if (e.key === "Enter") {
+      placeInColumn(pointerColumn);
+    }
+  });
+
   $playVsPlayerButton.addEventListener("click", () => {
     document.querySelector(".main-menu-screen").classList.add("hidden");
     document.querySelector(".game-screen").classList.remove("hidden");
@@ -294,69 +404,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   $gridColumns.forEach(($column) => {
     $column.addEventListener("click", () => {
-      if (winner > 0) return;
       const columnId = $column.getAttribute("data-column-id");
-
-      if (gameGrid[columnId].length < 6) {
-        gameGrid[columnId].push(currentPlayer);
-        currentPlayer = -currentPlayer;
-      }
-      drawColumn(gameGrid, columnId);
-      winner = checkWin(gameGrid);
-      console.log(winner);
-      if (winner > 0) {
-        $winnerIndicator.classList.add(
-          {
-            1: "game-screen-winner-indicator--yellow",
-            3: "game-screen-winner-indicator--red",
-          }[winner]
-        );
-
-        document.querySelector(".game-screen-winner").textContent = {
-          3: "PLAYER 1",
-          1: "PLAYER 2",
-        }[winner];
-
-        truc1 = {
-          1: () => {
-            let $truc2 = document.querySelector(
-              ".game-screen-player-points--player-two .game-screen-player-points-score"
-            );
-            $truc2.textContent = parseInt($truc2.textContent) + 1;
-          },
-          3: () => {
-            let $truc2 = document.querySelector(
-              ".game-screen-player-points--player-one .game-screen-player-points-score"
-            );
-            $truc2.textContent = parseInt($truc2.textContent) + 1;
-          },
-        };
-
-        truc1[winner]();
-
-        $playerClockContainer.classList.add("hidden");
-        console.log("winner");
-        document
-          .querySelector(".game-screen-winner-container")
-          .classList.remove("hidden");
-      } else if (winner === 0) {
-        document.querySelector(".game-screen-winner").textContent = "NOBODY";
-        $playerClockContainer.classList.add("hidden");
-
-        document
-          .querySelector(".game-screen-winner-container")
-          .classList.remove("hidden");
-      }
-
-      updatePlayerTurn(currentPlayer);
+      placeInColumn(columnId);
     });
 
     $column.addEventListener("mouseenter", () => {
-      $playerPointer.style.left = `${
-        $column.offsetLeft +
-        $column.clientWidth / 2 -
-        $playerPointer.clientWidth / 2
-      }px`;
+      const columnId = $column.getAttribute("data-column-id");
+      pointerColumn = parseInt(columnId);
+      updatePlayerPointer(currentPlayer, pointerColumn);
     });
   });
 });
