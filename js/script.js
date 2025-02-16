@@ -76,6 +76,7 @@ let firstPlayer = 1;
 let winner = 0;
 const maxTurnTime = 30; // en secondes
 let pointerColumn = 0;
+let winnerDivs = [];
 
 function redrawGrid(grid) {
   for (let i = 0; i < grid.length; i++) {
@@ -309,6 +310,10 @@ function resetGrid() {
     .classList.add("hidden");
   $playerClockContainer.classList.remove("hidden");
   resetPlayerClock();
+  winnerDivs.forEach((div) => {
+    div.remove();
+  });
+  winnerDivs = [];
 }
 
 function resetGame() {
@@ -390,7 +395,11 @@ function updateWinner(winner) {
         ".game-screen-grid__cell"
       )[5 - cell.y];
       console.log($cell);
-      $cell.innerHTML += `<div class="game-screen-grid__cell-wrapper"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="17" cy="17" r="14" stroke="white" stroke-width="6" fill="none"/></svg></div>`;
+      const $div = document.createElement("div");
+      $div.classList.add("game-screen-grid__cell-wrapper");
+      $div.innerHTML = `<svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="17" cy="17" r="14" stroke="white" stroke-width="6" fill="none"/></svg>`;
+      winnerDivs.push($div);
+      $cell.appendChild($div);
     });
   } else if (winner === 0) {
     document.querySelector(".game-screen-winner").textContent = "NOBODY";
@@ -408,7 +417,7 @@ function updateWinner(winner) {
   }
 }
 
-function placeInColumn(column) {
+function placeInGrid(column) {
   if (winner > 0) return;
   if (gameGrid[column].length < 6) {
     gameGrid[column].push(currentPlayer);
@@ -430,7 +439,7 @@ document.addEventListener("DOMContentLoaded", () => {
       pointerColumn = Math.min(pointerColumn + 1, 6);
       updatePlayerPointer(currentPlayer, pointerColumn);
     } else if (e.key === "Enter") {
-      placeInColumn(pointerColumn);
+      placeInGrid(pointerColumn);
     }
   });
 
@@ -487,7 +496,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $gridColumns.forEach(($column) => {
     $column.addEventListener("click", () => {
       const columnId = $column.getAttribute("data-column-id");
-      placeInColumn(columnId);
+      placeInGrid(columnId);
     });
 
     $column.addEventListener("mouseenter", () => {
