@@ -82,6 +82,12 @@ ul {
   background-color: var(--white);
 }
 
+.main-menu-buttons__button--tertiary {
+  position: relative;
+  background-color: var(--red);
+  color: var(--white);
+}
+
 .main-menu-buttons__player-vs-player-icon {
   position: absolute;
   right: 20px;

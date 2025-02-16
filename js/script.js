@@ -77,6 +77,8 @@ let winner = 0;
 const maxTurnTime = 30; // en secondes
 let pointerColumn = 0;
 let winnerDivs = [];
+let gameTree = null;
+let soloGame = false;
 
 function redrawGrid(grid) {
   for (let i = 0; i < grid.length; i++) {
@@ -430,6 +432,76 @@ function placeInGrid(column) {
   }
 }
 
+class Node {
+  constructor(grid, player, depth, parent) {
+    this.parent = parent;
+    this.grid = grid;
+    this.player = player;
+    this.depth = depth;
+    this.children = [];
+    this.value = null;
+    const gridValue = checkWin(grid);
+    if (gridValue === 0) {
+      this.value = 0;
+    } else if (gridValue > 0) {
+      this.value = gridValue - 2;
+    }
+    if (this.value !== null && this.parent !== null) {
+      this.parent.reCalculateValue();
+    }
+  }
+
+  reCalculateValue() {
+    if (checkWin(this.grid) !== -1) {
+      return;
+    }
+
+    const childValues = this.children.map((child) => child.value);
+    if (this.player === 1) {
+      this.value = Math.max(...childValues);
+    } else {
+      this.value = Math.min(...childValues);
+    }
+    if (this.parent !== null) {
+      this.parent.reCalculateValue();
+    }
+    return this.value;
+  }
+}
+
+function estimateBoardValue(grid, player, maxTime, maxDepth) {
+  const root = new Node(grid, player, 0, null);
+  const queue = [root];
+  const startTime = Date.now();
+  let currentNode = root;
+  while (queue.length > 0) {
+    currentNode = queue.shift();
+    if (currentNode.value !== null) {
+      continue;
+    }
+    if (Date.now() - startTime > maxTime || currentNode.depth >= maxDepth) {
+      break;
+    }
+    for (let i = 0; i < 7; i++) {
+      if (currentNode.grid[i].length < 6) {
+        const childGrid = structuredClone(currentNode.grid);
+        childGrid[i].push(currentNode.player);
+        const childNode = new Node(
+          childGrid,
+          -currentNode.player,
+          currentNode.depth + 1,
+          currentNode
+        );
+        currentNode.children.push(childNode);
+        queue.push(childNode);
+      }
+    }
+  }
+  return root;
+}
+
+// console.log(estimateBoardValue(gameGrid, 1, 2000, 100));
+
 document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("keydown", (e) => {
     if (e.key === "ArrowLeft") {
@@ -443,9 +515,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  $playVsCpuButton.addEventListener("click", () => {
+    document.querySelector(".main-menu-screen").classList.add("hidden");
+    document.querySelector(".game-screen").classList.remove("hidden");
+    soloGame = true;
+    resetGame();
+  });
+
   $playVsPlayerButton.addEventListener("click", () => {
     document.querySelector(".main-menu-screen").classList.add("hidden");
     document.querySelector(".game-screen").classList.remove("hidden");
+    soloGame = false;
     resetGame();
   });
 
