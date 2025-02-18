@@ -1,6 +1,9 @@
 const $playVsPlayerButton = document.querySelector(
   ".main-menu-buttons__button--primary"
 );
+const $playVsCpuButton = document.querySelector(
+  ".main-menu-buttons__button--tertiary"
+);
 const $rulesButton = document.querySelector(
   ".main-menu-buttons__button--secondary"
 );
@@ -54,6 +57,7 @@ const $playerClockPlayer = document.querySelector(
 );
 
 // console.log($playVsPlayerButton);
+// console.log($playVsCpuButton);
 // console.log($rulesButton);
 // console.log($rulesCloseButton);
 
@@ -79,6 +83,7 @@ let pointerColumn = 0;
 let winnerDivs = [];
 let gameTree = null;
 let soloGame = false;
+let root = null;
 
 function redrawGrid(grid) {
   for (let i = 0; i < grid.length; i++) {
@@ -316,6 +321,12 @@ function resetGrid() {
     div.remove();
   });
   winnerDivs = [];
+  if (soloGame) {
+    if (currentPlayer === -1) {
+      placeInGrid(3);
+    }
+    root = estimateBoardValue(gameGrid, 1, 1000);
+  }
 }
 
 function resetGame() {
@@ -420,7 +431,7 @@ function updateWinner(winner) {
 }
 
 function placeInGrid(column) {
-  if (winner > 0) return;
+  if (winner > 0) return false;
   if (gameGrid[column].length < 6) {
     gameGrid[column].push(currentPlayer);
     currentPlayer = -currentPlayer;
@@ -429,14 +440,17 @@ function placeInGrid(column) {
     updatePlayerTurn(currentPlayer);
     winner = checkWin(gameGrid);
     updateWinner(winner);
+    return true;
   }
+  return false;
 }
 
 class Node {
-  constructor(grid, player, depth, parent) {
+  constructor(grid, player, depth, parent, play) {
     this.parent = parent;
     this.grid = grid;
     this.player = player;
+    this.play = play;
     this.depth = depth;
     this.children = [];
     this.value = null;
@@ -452,25 +466,47 @@ class Node {
   }
 
   reCalculateValue() {
+    const currentValue = this.value;
     if (checkWin(this.grid) !== -1) {
       return;
     }
 
     const childValues = this.children.map((child) => child.value);
-    if (this.player === 1) {
-      this.value = Math.max(...childValues);
-    } else {
-      this.value = Math.min(...childValues);
+    if (childValues.length === 0) {
+      return;
     }
-    if (this.parent !== null) {
+    let value = childValues.reduce((a, b) => a + b);
+    if (value > 0) {
+      value =
+        childValues.reduce((a, b) => {
+          if (b > 0) {
+            return a + b;
+          } else {
+            return a;
+          }
+        }) / childValues.length;
+    } else if (value < 0) {
+      value =
+        childValues.reduce((a, b) => {
+          if (b < 0) {
+            return a + b;
+          } else {
+            return a;
+          }
+        }) / childValues.length;
+    } else {
+      value = 0;
+    }
+    this.value = value;
+    if (this.parent !== null && currentValue !== this.value) {
       this.parent.reCalculateValue();
     }
     return this.value;
   }
 }
 
-function estimateBoardValue(grid, player, maxTime, maxDepth) {
-  const root = new Node(grid, player, 0, null);
+function estimateBoardValue(grid, player, maxTime) {
+  const root = new Node(grid, player, 0, null, null);
   const queue = [root];
   const startTime = Date.now();
   let currentNode = root;
@@ -479,7 +515,7 @@ function estimateBoardValue(grid, player, maxTime, maxDepth) {
     if (currentNode.value !== null) {
       continue;
     }
-    if (Date.now() - startTime > maxTime || currentNode.depth >= maxDepth) {
+    if (Date.now() - startTime > maxTime) {
       break;
     }
     for (let i = 0; i < 7; i++) {
@@ -490,7 +526,8 @@ function estimateBoardValue(grid, player, maxTime, maxDepth) {
           childGrid,
           -currentNode.player,
           currentNode.depth + 1,
-          currentNode
+          currentNode,
+          i
         );
         currentNode.children.push(childNode);
         queue.push(childNode);
@@ -500,7 +537,56 @@ function estimateBoardValue(grid, player, maxTime, maxDepth) {
   return root;
 }
 
-// console.log(estimateBoardValue(gameGrid, 1, 2000, 100));
+function continueEstimation(root, maxTime) {
+  const startTime = Date.now();
+  let currentNode = root;
+  const queue = [];
+  function addToQueueRecursively(node) {
+    if (!node) console.log(node);
+    if (node.children.length === 0) {
+      queue.push(node);
+    } else {
+      node.children.forEach((child) => {
+        addToQueueRecursively(child);
+      });
+    }
+  }
+  addToQueueRecursively(root);
+  while (queue.length > 0) {
+    currentNode = queue.shift();
+    if (currentNode.value !== null) {
+      continue;
+    }
+    if (Date.now() - startTime > maxTime) {
+      break;
+    }
+    for (let i = 0; i < 7; i++) {
+      if (currentNode.grid[i].length < 6) {
+        const childGrid = structuredClone(currentNode.grid);
+        childGrid[i].push(currentNode.player);
+        const childNode = new Node(
+          childGrid,
+          -currentNode.player,
+          currentNode.depth + 1,
+          currentNode,
+          i
+        );
+        currentNode.children.push(childNode);
+        queue.push(childNode);
+      }
+    }
+  }
+}
+
+function chooseBestMove(root, player) {
+  let moves;
+  if (player === 1) {
+    moves = structuredClone(root.children).sort((a, b) => b.value - a.value);
+  } else {
+    moves = structuredClone(root.children).sort((a, b) => a.value - b.value);
+  }
+  return moves[0].play;
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("keydown", (e) => {
@@ -520,6 +606,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelector(".game-screen").classList.remove("hidden");
     soloGame = true;
     resetGame();
+    root = estimateBoardValue(gameGrid, 1, 1000);
   });
 
   $playVsPlayerButton.addEventListener("click", () => {
@@ -575,8 +662,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
   $gridColumns.forEach(($column) => {
     $column.addEventListener("click", () => {
-      const columnId = $column.getAttribute("data-column-id");
-      placeInGrid(columnId);
+      let columnId = $column.getAttribute("data-column-id");
+      if (soloGame) {
+        if (placeInGrid(columnId)) {
+          root = root.children.filter((child) => child.play == columnId)[0];
+          root.parent = null;
+          continueEstimation(root, 1000);
+          columnId = chooseBestMove(root, currentPlayer);
+          placeInGrid(columnId);
+          root = root.children.filter((child) => child.play == columnId)[0];
+          root.parent = null;
+          console.log(root);
+        }
+      } else {
+        placeInGrid(columnId);
+      }
     });
 
     $column.addEventListener("mouseenter", () => {
