@@ -84,6 +84,7 @@ let winnerDivs = [];
 let gameTree = null;
 let soloGame = false;
 let root = null;
+let paused = false;
 
 function redrawGrid(grid) {
   for (let i = 0; i < grid.length; i++) {
@@ -299,10 +300,17 @@ function updatePlayerTurn(player) {
       "-1": "game-screen-player-clock-container--yellow",
     }[player]
   );
-  $playerClockPlayer.textContent = {
-    1: "PLAYER 1’S TURN",
-    "-1": "PLAYER 2’S TURN",
-  }[player];
+  if (soloGame) {
+    $playerClockPlayer.textContent = {
+      1: "YOUR TURN",
+      "-1": "CPU’S TURN",
+    }[player];
+  } else {
+    $playerClockPlayer.textContent = {
+      1: "PLAYER 1’S TURN",
+      "-1": "PLAYER 2’S TURN",
+    }[player];
+  }
 }
 
 function resetGrid() {
@@ -348,6 +356,7 @@ function resetGame() {
   document
     .querySelector(".game-screen-winner-container")
     .classList.add("hidden");
+  paused = false;
 }
 
 function resetPlayerClock() {
@@ -358,8 +367,12 @@ function resetPlayerClock() {
         winner = -currentPlayer + 2;
         updateWinner(winner);
       }
-      setTimeout(countDown, 1000, s - 1);
-      $playerClock.textContent = $playerClock.textContent - 1;
+      if (!paused) {
+        $playerClock.textContent = $playerClock.textContent - 1;
+        setTimeout(countDown, 1000, s - 1);
+      } else {
+        setTimeout(countDown, 1000, s);
+      }
     }
   }
   setTimeout(countDown, 1000, maxTurnTime);
@@ -374,10 +387,17 @@ function updateWinner(winner) {
       }[winner]
     );
 
-    document.querySelector(".game-screen-winner").textContent = {
-      3: "PLAYER 1",
-      1: "PLAYER 2",
-    }[winner];
+    if (soloGame) {
+      document.querySelector(".game-screen-winner").textContent = {
+        3: "YOU",
+        1: "CPU",
+      }[winner];
+    } else {
+      document.querySelector(".game-screen-winner").textContent = {
+        3: "PLAYER 1",
+        1: "PLAYER 2",
+      }[winner];
+    }
 
     truc1 = {
       1: () => {
@@ -445,7 +465,7 @@ function placeInGrid(column) {
   return false;
 }
 
-class Node {
+class EstimationNode {
   constructor(grid, player, depth, parent, play) {
     this.parent = parent;
     this.grid = grid;
@@ -506,7 +526,7 @@ class Node {
 }
 
 function estimateBoardValue(grid, player, maxTime) {
-  const root = new Node(grid, player, 0, null, null);
+  const root = new EstimationNode(grid, player, 0, null, null);
   const queue = [root];
   const startTime = Date.now();
   let currentNode = root;
@@ -522,7 +542,7 @@ function estimateBoardValue(grid, player, maxTime) {
       if (currentNode.grid[i].length < 6) {
         const childGrid = structuredClone(currentNode.grid);
         childGrid[i].push(currentNode.player);
-        const childNode = new Node(
+        const childNode = new EstimationNode(
           childGrid,
           -currentNode.player,
           currentNode.depth + 1,
@@ -541,6 +561,7 @@ function continueEstimation(root, maxTime) {
   const startTime = Date.now();
   let currentNode = root;
   const queue = [];
+
   function addToQueueRecursively(node) {
     if (!node) console.log(node);
     if (node.children.length === 0) {
@@ -551,7 +572,9 @@ function continueEstimation(root, maxTime) {
       });
     }
   }
+
   addToQueueRecursively(root);
+  
   while (queue.length > 0) {
     currentNode = queue.shift();
     if (currentNode.value !== null) {
@@ -564,7 +587,7 @@ function continueEstimation(root, maxTime) {
       if (currentNode.grid[i].length < 6) {
         const childGrid = structuredClone(currentNode.grid);
         childGrid[i].push(currentNode.player);
-        const childNode = new Node(
+        const childNode = new EstimationNode(
           childGrid,
           -currentNode.player,
           currentNode.depth + 1,
@@ -604,6 +627,22 @@ document.addEventListener("DOMContentLoaded", () => {
   $playVsCpuButton.addEventListener("click", () => {
     document.querySelector(".main-menu-screen").classList.add("hidden");
     document.querySelector(".game-screen").classList.remove("hidden");
+
+    document.querySelector(
+      ".game-screen-player-points--player-one .game-screen-player-points-icon"
+    ).innerHTML =
+      '<svg width="54" height="59" viewBox="0 0 54 59" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="you"><circle id="Oval Copy 21" cx="27" cy="27" r="27" transform="matrix(-1 0 0 1 54 0)" fill="black"/><circle id="Oval Copy 40" cx="27" cy="27" r="27" transform="matrix(-1 0 0 1 54 5)" fill="black"/><circle id="Oval Copy 11" cx="24" cy="24" r="24" transform="matrix(-1 0 0 1 51 3)" fill="#FD6687"/><g id="Group 22"><path id="Oval Copy 11_2" d="M12.75 25.25C12.75 32.7058 18.7942 38.75 26.25 38.75C33.7058 38.75 39.75 32.7058 39.75 25.25H36.75C36.75 31.049 32.049 35.75 26.25 35.75C20.451 35.75 15.75 31.049 15.75 25.25H12.75Z" fill="black"/><g id="Group 7"><path id="Path" d="M30 17V22.9844H33V17H30Z" fill="black"/><path id="Path Copy" d="M20 17V22.9844H23V17H20Z" fill="black"/></g></g></g></svg>';
+    document.querySelector(
+      ".game-screen-player-points--player-two .game-screen-player-points-icon"
+    ).innerHTML =
+      '<svg width="54" height="59" viewBox="0 0 54 59" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="cpu"><circle id="Oval Copy 21" cx="27" cy="27" r="27" transform="matrix(-1 0 0 1 54 0)" fill="black"/><circle id="Oval Copy 40" cx="27" cy="27" r="27" transform="matrix(-1 0 0 1 54 5)" fill="black"/><circle id="Oval Copy 11" cx="24" cy="24" r="24" transform="matrix(-1 0 0 1 51 3)" fill="#FFCE67"/><g id="Group 8"><g id="Group 7"><g id="Group 9"><g id="Group 10"><path id="Path Copy" d="M35.5 17V20H29.5V17H35.5Z" fill="black"/><path id="Path Copy 2" d="M24.5 17V20H18.5V17H24.5Z" fill="black"/><path id="Path 2" d="M39 24V27H15V24H39Z" fill="black"/></g></g></g></g></g></svg>';
+    document.querySelector(
+      ".game-screen-player-points--player-one .game-screen-player-points-player"
+    ).textContent = "YOU";
+    document.querySelector(
+      ".game-screen-player-points--player-two .game-screen-player-points-player"
+    ).textContent = "CPU";
+
     soloGame = true;
     resetGame();
     root = estimateBoardValue(gameGrid, 1, 1000);
@@ -612,6 +651,22 @@ document.addEventListener("DOMContentLoaded", () => {
   $playVsPlayerButton.addEventListener("click", () => {
     document.querySelector(".main-menu-screen").classList.add("hidden");
     document.querySelector(".game-screen").classList.remove("hidden");
+
+    document.querySelector(
+      ".game-screen-player-points--player-one .game-screen-player-points-icon"
+    ).innerHTML =
+      '<svg width="54" height="59" viewBox="0 0 54 59" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="player-one"><circle id="Oval Copy 21" cx="27" cy="27" r="27" fill="black"/><circle id="Oval Copy 40" cx="27" cy="32" r="27" fill="black"/><circle id="Oval Copy 11" cx="27" cy="27" r="24" fill="#FD6687"/><g id="Group 8"><path id="Oval Copy 11_2" d="M45.25 25C45.25 32.4558 39.2058 38.5 31.75 38.5C24.2942 38.5 18.25 32.4558 18.25 25H21.25C21.25 30.799 25.951 35.5 31.75 35.5C37.549 35.5 42.25 30.799 42.25 25H45.25Z" fill="black"/><g id="Group 7"><path id="Path" d="M30.75 17V22.9844H27.75V17H30.75Z" fill="black"/><path id="Path Copy" d="M40.75 17V22.9844H37.75V17H40.75Z" fill="black"/></g></g></g></svg>';
+    document.querySelector(
+      ".game-screen-player-points--player-two .game-screen-player-points-icon"
+    ).innerHTML =
+      '<svg width="54" height="59" viewBox="0 0 54 59" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="player-two"><circle id="Oval Copy 21" cx="27" cy="27" r="27" transform="matrix(-1 0 0 1 54 0)" fill="black"/><circle id="Oval Copy 40" cx="27" cy="27" r="27" transform="matrix(-1 0 0 1 54 5)" fill="black"/><circle id="Oval Copy 11" cx="24" cy="24" r="24" transform="matrix(-1 0 0 1 51 3)" fill="#FFCE67"/><g id="Group 8"><path id="Oval Copy 11_2" d="M8.75 25C8.75 32.4558 14.7942 38.5 22.25 38.5C29.7058 38.5 35.75 32.4558 35.75 25H32.75C32.75 30.799 28.049 35.5 22.25 35.5C16.451 35.5 11.75 30.799 11.75 25H8.75Z" fill="black"/><g id="Group 7"><path id="Path" d="M23.25 17V22.9844H26.25V17H23.25Z" fill="black"/><path id="Path Copy" d="M13.25 17V22.9844H16.25V17H13.25Z" fill="black"/></g></g></g></svg>';
+    document.querySelector(
+      ".game-screen-player-points--player-one .game-screen-player-points-player"
+    ).textContent = "PLAYER 1";
+    document.querySelector(
+      ".game-screen-player-points--player-two .game-screen-player-points-player"
+    ).textContent = "PLAYER 2";
+
     soloGame = false;
     resetGame();
   });
@@ -628,6 +683,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   $ingameMenuButton.addEventListener("click", () => {
     document.querySelector(".ingame-menu-screen").classList.remove("hidden");
+    paused = true;
   });
 
   $restartButton.addEventListener("click", () => {
@@ -638,6 +694,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   $ingameMenuContinueButton.addEventListener("click", () => {
     document.querySelector(".ingame-menu-screen").classList.add("hidden");
+    paused = false;
   });
 
   $ingameMenuRestartButton.addEventListener("click", () => {
