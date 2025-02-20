@@ -333,7 +333,7 @@ function resetGrid() {
     if (currentPlayer === -1) {
       placeInGrid(3);
     }
-    root = estimateBoardValue(gameGrid, 1, 1000);
+    root = initializeEstimation(gameGrid, -1, 1, 1000);
   }
 }
 
@@ -363,11 +363,11 @@ function resetPlayerClock() {
   $playerClock.textContent = maxTurnTime;
   function countDown(s) {
     if (s == $playerClock.textContent) {
-      if (s === 0) {
-        winner = -currentPlayer + 2;
-        updateWinner(winner);
-      }
       if (!paused) {
+        if (s === 0) {
+          winner = -currentPlayer + 2;
+          updateWinner(winner);
+        }
         $playerClock.textContent = $playerClock.textContent - 1;
         setTimeout(countDown, 1000, s - 1);
       } else {
@@ -489,283 +489,248 @@ class EstimationNode {
 
   reCalculateValue() {
     const currentValue = this.value;
-    if (checkWin(this.grid) !== -1) {
-      return;
-    }
-
     const childValues = this.children.map((child) => child.value || 0);
+
     if (childValues.length === 0) {
       return;
     }
 
-    if (this.player === this.currentPlayer) {
+    if (this.currentPlayer === this.player) {
       if (this.currentPlayer === 1) {
         this.value = Math.max(...childValues);
       } else {
         this.value = Math.min(...childValues);
       }
     } else {
-      let value; // = childValues.reduce((a, b) => a + b)
       if (this.currentPlayer === 1) {
-        value = Math.min(...childValues);
-        if (value > 0) {
-          value =
-            childValues.reduce((a, b) => {
-              if (b > 0) {
-                return a + b;
-              } else {
-                return a;
-              }
-            }) / childValues.length;
-        }
+        this.value = Math.min(...childValues);
       } else {
-        value = Math.max(...childValues);
-        if (value < 0) {
-          value =
-            childValues.reduce((a, b) => {
-              if (b < 0) {
-                return a + b;
-              } else {
-                return a;
-              }
-            }) / childValues.length;
-        }
+        this.value = Math.max(...childValues);
       }
-      this.value = value;
     }
-    if (this.parent !== null && currentValue !== this.value) {
+
+    if (this.value === Infinity) {
+      console.log("Infinity");
+      console.log(childValues);
+      console.log(this);
+      return;
+    }
+
+    if (this.parent !== null && this.value !== currentValue) {
       this.parent.reCalculateValue();
     }
-    return this.value;
+  }
+
+  continueEstimation(maxTime) {
+    const startTime = Date.now();
+    const queue = [];
+
+    function enqueue(node) {
+      if (node.children.length === 0) {
+        queue.push(node);
+      } else {
+        node.children.forEach((child) => {
+          enqueue(child);
+        });
+      }
+    }
+
+    enqueue(this);
+    queue.sort((a, b) => a.depth - b.depth);
+
+    while (queue.length > 0 && Date.now() - startTime < maxTime) {
+      const node = queue.shift();
+      if (node.value === null) {
+        for (let i = 0; i < 7; i++) {
+          const childGrid = structuredClone(node.grid);
+          if (childGrid[i].length < 6) {
+            childGrid[i].push(node.currentPlayer);
+            const childNode = new EstimationNode(
+              childGrid,
+              node.player,
+              -node.currentPlayer,
+              node.depth + 1,
+              node,
+              i
+            );
+            node.children.push(childNode);
+            queue.push(childNode);
+          }
+        }
+      }
+    }
+  }
+
+  chooseBestMove() {
+    if (this.currentPlayer === 1) {
+      return this.children.reduce((bestChild, child) => {
+        return child.value > bestChild.value ? child : bestChild;
+      }).play;
+    } else {
+      return this.children.reduce((bestChild, child) => {
+        return child.value < bestChild.value ? child : bestChild;
+      }).play;
+    }
   }
 }
 
-function estimateBoardValue(grid, player, maxTime) {
-  const root = new EstimationNode(grid, -1, player, 0, null, null);
-  const queue = [root];
+function initializeEstimation(grid, player, currentPlayer, maxTime) {
   const startTime = Date.now();
-  let currentNode = root;
-  while (queue.length > 0) {
-    currentNode = queue.shift();
-    if (currentNode.value !== null) {
-      continue;
-    }
-    if (Date.now() - startTime > maxTime) {
-      break;
-    }
-    for (let i = 0; i < 7; i++) {
-      if (currentNode.grid[i].length < 6) {
-        const childGrid = structuredClone(currentNode.grid);
-        childGrid[i].push(currentNode.currentPlayer);
-        const childNode = new EstimationNode(
-          childGrid,
-          currentNode.player,
-          -currentNode.currentPlayer,
-          currentNode.depth + 1,
-          currentNode,
-          i
-        );
-        currentNode.children.push(childNode);
-        if (childNode.value === null) {
+  const root = new EstimationNode(grid, player, currentPlayer, 0, null, null);
+  const queue = [root];
+
+  while (queue.length > 0 && Date.now() - startTime < maxTime) {
+    const node = queue.shift();
+    if (node.value === null) {
+      for (let i = 0; i < 7; i++) {
+        const childGrid = structuredClone(node.grid);
+        if (childGrid[i].length < 6) {
+          childGrid[i].push(node.currentPlayer);
+          const childNode = new EstimationNode(
+            childGrid,
+            node.player,
+            -node.currentPlayer,
+            node.depth + 1,
+            node,
+            i
+          );
+          node.children.push(childNode);
           queue.push(childNode);
         }
       }
     }
   }
-  console.log(root);
   return root;
 }
 
-function continueEstimation(root, maxTime) {
-  const startTime = Date.now();
-  let currentNode = root;
-  const queue = [];
+document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowLeft") {
+    pointerColumn = Math.max(pointerColumn - 1, 0);
+    updatePlayerPointer(currentPlayer, pointerColumn);
+  } else if (e.key === "ArrowRight") {
+    pointerColumn = Math.min(pointerColumn + 1, 6);
+    updatePlayerPointer(currentPlayer, pointerColumn);
+  } else if (e.key === "Enter") {
+    placeInGrid(pointerColumn);
+  }
+});
 
-  function addToQueueRecursively(node) {
-    if (!node) console.log(node);
-    if (node.children.length === 0) {
-      if (node.value === null) {
-        queue.push(node);
+$playVsCpuButton.addEventListener("click", () => {
+  document.querySelector(".main-menu-screen").classList.add("hidden");
+  document.querySelector(".game-screen").classList.remove("hidden");
+
+  document.querySelector(
+    ".game-screen-player-points--player-one .game-screen-player-points-icon"
+  ).innerHTML =
+    '<svg width="54" height="59" viewBox="0 0 54 59" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="you"><circle id="Oval Copy 21" cx="27" cy="27" r="27" transform="matrix(-1 0 0 1 54 0)" fill="black"/><circle id="Oval Copy 40" cx="27" cy="27" r="27" transform="matrix(-1 0 0 1 54 5)" fill="black"/><circle id="Oval Copy 11" cx="24" cy="24" r="24" transform="matrix(-1 0 0 1 51 3)" fill="#FD6687"/><g id="Group 22"><path id="Oval Copy 11_2" d="M12.75 25.25C12.75 32.7058 18.7942 38.75 26.25 38.75C33.7058 38.75 39.75 32.7058 39.75 25.25H36.75C36.75 31.049 32.049 35.75 26.25 35.75C20.451 35.75 15.75 31.049 15.75 25.25H12.75Z" fill="black"/><g id="Group 7"><path id="Path" d="M30 17V22.9844H33V17H30Z" fill="black"/><path id="Path Copy" d="M20 17V22.9844H23V17H20Z" fill="black"/></g></g></g></svg>';
+  document.querySelector(
+    ".game-screen-player-points--player-two .game-screen-player-points-icon"
+  ).innerHTML =
+    '<svg width="54" height="59" viewBox="0 0 54 59" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="cpu"><circle id="Oval Copy 21" cx="27" cy="27" r="27" transform="matrix(-1 0 0 1 54 0)" fill="black"/><circle id="Oval Copy 40" cx="27" cy="27" r="27" transform="matrix(-1 0 0 1 54 5)" fill="black"/><circle id="Oval Copy 11" cx="24" cy="24" r="24" transform="matrix(-1 0 0 1 51 3)" fill="#FFCE67"/><g id="Group 8"><g id="Group 7"><g id="Group 9"><g id="Group 10"><path id="Path Copy" d="M35.5 17V20H29.5V17H35.5Z" fill="black"/><path id="Path Copy 2" d="M24.5 17V20H18.5V17H24.5Z" fill="black"/><path id="Path 2" d="M39 24V27H15V24H39Z" fill="black"/></g></g></g></g></g></svg>';
+  document.querySelector(
+    ".game-screen-player-points--player-one .game-screen-player-points-player"
+  ).textContent = "YOU";
+  document.querySelector(
+    ".game-screen-player-points--player-two .game-screen-player-points-player"
+  ).textContent = "CPU";
+
+  soloGame = true;
+  resetGame();
+  root = initializeEstimation(gameGrid, -1, 1, 1000);
+});
+
+$playVsPlayerButton.addEventListener("click", () => {
+  document.querySelector(".main-menu-screen").classList.add("hidden");
+  document.querySelector(".game-screen").classList.remove("hidden");
+
+  document.querySelector(
+    ".game-screen-player-points--player-one .game-screen-player-points-icon"
+  ).innerHTML =
+    '<svg width="54" height="59" viewBox="0 0 54 59" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="player-one"><circle id="Oval Copy 21" cx="27" cy="27" r="27" fill="black"/><circle id="Oval Copy 40" cx="27" cy="32" r="27" fill="black"/><circle id="Oval Copy 11" cx="27" cy="27" r="24" fill="#FD6687"/><g id="Group 8"><path id="Oval Copy 11_2" d="M45.25 25C45.25 32.4558 39.2058 38.5 31.75 38.5C24.2942 38.5 18.25 32.4558 18.25 25H21.25C21.25 30.799 25.951 35.5 31.75 35.5C37.549 35.5 42.25 30.799 42.25 25H45.25Z" fill="black"/><g id="Group 7"><path id="Path" d="M30.75 17V22.9844H27.75V17H30.75Z" fill="black"/><path id="Path Copy" d="M40.75 17V22.9844H37.75V17H40.75Z" fill="black"/></g></g></g></svg>';
+  document.querySelector(
+    ".game-screen-player-points--player-two .game-screen-player-points-icon"
+  ).innerHTML =
+    '<svg width="54" height="59" viewBox="0 0 54 59" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="player-two"><circle id="Oval Copy 21" cx="27" cy="27" r="27" transform="matrix(-1 0 0 1 54 0)" fill="black"/><circle id="Oval Copy 40" cx="27" cy="27" r="27" transform="matrix(-1 0 0 1 54 5)" fill="black"/><circle id="Oval Copy 11" cx="24" cy="24" r="24" transform="matrix(-1 0 0 1 51 3)" fill="#FFCE67"/><g id="Group 8"><path id="Oval Copy 11_2" d="M8.75 25C8.75 32.4558 14.7942 38.5 22.25 38.5C29.7058 38.5 35.75 32.4558 35.75 25H32.75C32.75 30.799 28.049 35.5 22.25 35.5C16.451 35.5 11.75 30.799 11.75 25H8.75Z" fill="black"/><g id="Group 7"><path id="Path" d="M23.25 17V22.9844H26.25V17H23.25Z" fill="black"/><path id="Path Copy" d="M13.25 17V22.9844H16.25V17H13.25Z" fill="black"/></g></g></g></svg>';
+  document.querySelector(
+    ".game-screen-player-points--player-one .game-screen-player-points-player"
+  ).textContent = "PLAYER 1";
+  document.querySelector(
+    ".game-screen-player-points--player-two .game-screen-player-points-player"
+  ).textContent = "PLAYER 2";
+
+  soloGame = false;
+  resetGame();
+});
+
+$rulesButton.addEventListener("click", () => {
+  document.querySelector(".main-menu-screen").classList.add("hidden");
+  document.querySelector(".rules-screen").classList.remove("hidden");
+});
+
+$rulesCloseButton.addEventListener("click", () => {
+  document.querySelector(".rules-screen").classList.add("hidden");
+  document.querySelector(".main-menu-screen").classList.remove("hidden");
+});
+
+$ingameMenuButton.addEventListener("click", () => {
+  document.querySelector(".ingame-menu-screen").classList.remove("hidden");
+  paused = true;
+});
+
+$restartButton.addEventListener("click", () => {
+  resetGrid();
+  currentPlayer = firstPlayer;
+  updatePlayerTurn(currentPlayer);
+});
+
+$ingameMenuContinueButton.addEventListener("click", () => {
+  document.querySelector(".ingame-menu-screen").classList.add("hidden");
+  paused = false;
+});
+
+$ingameMenuRestartButton.addEventListener("click", () => {
+  resetGame();
+  currentPlayer = firstPlayer;
+  updatePlayerTurn(currentPlayer);
+  document.querySelector(".ingame-menu-screen").classList.add("hidden");
+});
+
+$ingameMenuQuitButton.addEventListener("click", () => {
+  document.querySelector(".ingame-menu-screen").classList.add("hidden");
+  document.querySelector(".game-screen").classList.add("hidden");
+  document.querySelector(".main-menu-screen").classList.remove("hidden");
+});
+
+$playAgainButton.addEventListener("click", () => {
+  document
+    .querySelector(".game-screen-winner-container")
+    .classList.add("hidden");
+  resetGrid();
+  paused = false;
+});
+
+$gridColumns.forEach(($column) => {
+  $column.addEventListener("click", () => {
+    let columnId = $column.getAttribute("data-column-id");
+    if (soloGame) {
+      if (placeInGrid(columnId) && winner === -1) {
+        root = root.children.filter((child) => child.play == columnId)[0];
+        root.parent = null;
+        root.continueEstimation(1000);
+        columnId = root.chooseBestMove();
+        placeInGrid(columnId);
+        root = root.children.filter((child) => child.play == columnId)[0];
+        root.parent = null;
+        console.log(root);
       }
     } else {
-      node.children.forEach((child) => {
-        addToQueueRecursively(child);
-      });
-    }
-  }
-
-  addToQueueRecursively(root);
-
-  while (queue.length > 0) {
-    currentNode = queue.shift();
-    if (currentNode.value !== null) {
-      continue;
-    }
-    if (Date.now() - startTime > maxTime) {
-      break;
-    }
-    for (let i = 0; i < 7; i++) {
-      if (currentNode.grid[i].length < 6) {
-        const childGrid = structuredClone(currentNode.grid);
-        childGrid[i].push(currentNode.currentPlayer);
-        const childNode = new EstimationNode(
-          childGrid,
-          currentNode.player,
-          -currentNode.currentPlayer,
-          currentNode.depth + 1,
-          currentNode,
-          i
-        );
-        currentNode.children.push(childNode);
-        if (childNode.value === null) {
-          queue.push(childNode);
-        }
-      }
-    }
-  }
-  console.log(root);
-}
-
-function chooseBestMove(root, player) {
-  let moves;
-  if (player === 1) {
-    moves = structuredClone(root.children).sort((a, b) => b.value - a.value);
-  } else {
-    moves = structuredClone(root.children).sort((a, b) => a.value - b.value);
-  }
-  return moves[0].play;
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowLeft") {
-      pointerColumn = Math.max(pointerColumn - 1, 0);
-      updatePlayerPointer(currentPlayer, pointerColumn);
-    } else if (e.key === "ArrowRight") {
-      pointerColumn = Math.min(pointerColumn + 1, 6);
-      updatePlayerPointer(currentPlayer, pointerColumn);
-    } else if (e.key === "Enter") {
-      placeInGrid(pointerColumn);
+      placeInGrid(columnId);
     }
   });
 
-  $playVsCpuButton.addEventListener("click", () => {
-    document.querySelector(".main-menu-screen").classList.add("hidden");
-    document.querySelector(".game-screen").classList.remove("hidden");
-
-    document.querySelector(
-      ".game-screen-player-points--player-one .game-screen-player-points-icon"
-    ).innerHTML =
-      '<svg width="54" height="59" viewBox="0 0 54 59" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="you"><circle id="Oval Copy 21" cx="27" cy="27" r="27" transform="matrix(-1 0 0 1 54 0)" fill="black"/><circle id="Oval Copy 40" cx="27" cy="27" r="27" transform="matrix(-1 0 0 1 54 5)" fill="black"/><circle id="Oval Copy 11" cx="24" cy="24" r="24" transform="matrix(-1 0 0 1 51 3)" fill="#FD6687"/><g id="Group 22"><path id="Oval Copy 11_2" d="M12.75 25.25C12.75 32.7058 18.7942 38.75 26.25 38.75C33.7058 38.75 39.75 32.7058 39.75 25.25H36.75C36.75 31.049 32.049 35.75 26.25 35.75C20.451 35.75 15.75 31.049 15.75 25.25H12.75Z" fill="black"/><g id="Group 7"><path id="Path" d="M30 17V22.9844H33V17H30Z" fill="black"/><path id="Path Copy" d="M20 17V22.9844H23V17H20Z" fill="black"/></g></g></g></svg>';
-    document.querySelector(
-      ".game-screen-player-points--player-two .game-screen-player-points-icon"
-    ).innerHTML =
-      '<svg width="54" height="59" viewBox="0 0 54 59" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="cpu"><circle id="Oval Copy 21" cx="27" cy="27" r="27" transform="matrix(-1 0 0 1 54 0)" fill="black"/><circle id="Oval Copy 40" cx="27" cy="27" r="27" transform="matrix(-1 0 0 1 54 5)" fill="black"/><circle id="Oval Copy 11" cx="24" cy="24" r="24" transform="matrix(-1 0 0 1 51 3)" fill="#FFCE67"/><g id="Group 8"><g id="Group 7"><g id="Group 9"><g id="Group 10"><path id="Path Copy" d="M35.5 17V20H29.5V17H35.5Z" fill="black"/><path id="Path Copy 2" d="M24.5 17V20H18.5V17H24.5Z" fill="black"/><path id="Path 2" d="M39 24V27H15V24H39Z" fill="black"/></g></g></g></g></g></svg>';
-    document.querySelector(
-      ".game-screen-player-points--player-one .game-screen-player-points-player"
-    ).textContent = "YOU";
-    document.querySelector(
-      ".game-screen-player-points--player-two .game-screen-player-points-player"
-    ).textContent = "CPU";
-
-    soloGame = true;
-    resetGame();
-    root = estimateBoardValue(gameGrid, 1, 1000);
-  });
-
-  $playVsPlayerButton.addEventListener("click", () => {
-    document.querySelector(".main-menu-screen").classList.add("hidden");
-    document.querySelector(".game-screen").classList.remove("hidden");
-
-    document.querySelector(
-      ".game-screen-player-points--player-one .game-screen-player-points-icon"
-    ).innerHTML =
-      '<svg width="54" height="59" viewBox="0 0 54 59" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="player-one"><circle id="Oval Copy 21" cx="27" cy="27" r="27" fill="black"/><circle id="Oval Copy 40" cx="27" cy="32" r="27" fill="black"/><circle id="Oval Copy 11" cx="27" cy="27" r="24" fill="#FD6687"/><g id="Group 8"><path id="Oval Copy 11_2" d="M45.25 25C45.25 32.4558 39.2058 38.5 31.75 38.5C24.2942 38.5 18.25 32.4558 18.25 25H21.25C21.25 30.799 25.951 35.5 31.75 35.5C37.549 35.5 42.25 30.799 42.25 25H45.25Z" fill="black"/><g id="Group 7"><path id="Path" d="M30.75 17V22.9844H27.75V17H30.75Z" fill="black"/><path id="Path Copy" d="M40.75 17V22.9844H37.75V17H40.75Z" fill="black"/></g></g></g></svg>';
-    document.querySelector(
-      ".game-screen-player-points--player-two .game-screen-player-points-icon"
-    ).innerHTML =
-      '<svg width="54" height="59" viewBox="0 0 54 59" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="player-two"><circle id="Oval Copy 21" cx="27" cy="27" r="27" transform="matrix(-1 0 0 1 54 0)" fill="black"/><circle id="Oval Copy 40" cx="27" cy="27" r="27" transform="matrix(-1 0 0 1 54 5)" fill="black"/><circle id="Oval Copy 11" cx="24" cy="24" r="24" transform="matrix(-1 0 0 1 51 3)" fill="#FFCE67"/><g id="Group 8"><path id="Oval Copy 11_2" d="M8.75 25C8.75 32.4558 14.7942 38.5 22.25 38.5C29.7058 38.5 35.75 32.4558 35.75 25H32.75C32.75 30.799 28.049 35.5 22.25 35.5C16.451 35.5 11.75 30.799 11.75 25H8.75Z" fill="black"/><g id="Group 7"><path id="Path" d="M23.25 17V22.9844H26.25V17H23.25Z" fill="black"/><path id="Path Copy" d="M13.25 17V22.9844H16.25V17H13.25Z" fill="black"/></g></g></g></svg>';
-    document.querySelector(
-      ".game-screen-player-points--player-one .game-screen-player-points-player"
-    ).textContent = "PLAYER 1";
-    document.querySelector(
-      ".game-screen-player-points--player-two .game-screen-player-points-player"
-    ).textContent = "PLAYER 2";
-
-    soloGame = false;
-    resetGame();
-  });
-
-  $rulesButton.addEventListener("click", () => {
-    document.querySelector(".main-menu-screen").classList.add("hidden");
-    document.querySelector(".rules-screen").classList.remove("hidden");
-  });
-
-  $rulesCloseButton.addEventListener("click", () => {
-    document.querySelector(".rules-screen").classList.add("hidden");
-    document.querySelector(".main-menu-screen").classList.remove("hidden");
-  });
-
-  $ingameMenuButton.addEventListener("click", () => {
-    document.querySelector(".ingame-menu-screen").classList.remove("hidden");
-    paused = true;
-  });
-
-  $restartButton.addEventListener("click", () => {
-    resetGrid();
-    currentPlayer = firstPlayer;
-    updatePlayerTurn(currentPlayer);
-  });
-
-  $ingameMenuContinueButton.addEventListener("click", () => {
-    document.querySelector(".ingame-menu-screen").classList.add("hidden");
-    paused = false;
-  });
-
-  $ingameMenuRestartButton.addEventListener("click", () => {
-    resetGame();
-    currentPlayer = firstPlayer;
-    updatePlayerTurn(currentPlayer);
-    document.querySelector(".ingame-menu-screen").classList.add("hidden");
-  });
-
-  $ingameMenuQuitButton.addEventListener("click", () => {
-    document.querySelector(".ingame-menu-screen").classList.add("hidden");
-    document.querySelector(".game-screen").classList.add("hidden");
-    document.querySelector(".main-menu-screen").classList.remove("hidden");
-  });
-
-  $playAgainButton.addEventListener("click", () => {
-    document
-      .querySelector(".game-screen-winner-container")
-      .classList.add("hidden");
-    resetGrid();
-    paused = false;
-  });
-
-  $gridColumns.forEach(($column) => {
-    $column.addEventListener("click", () => {
-      let columnId = $column.getAttribute("data-column-id");
-      if (soloGame) {
-        if (placeInGrid(columnId)) {
-          root = root.children.filter((child) => child.play == columnId)[0];
-          root.parent = null;
-          continueEstimation(root, 1000);
-          columnId = chooseBestMove(root, currentPlayer);
-          placeInGrid(columnId);
-          root = root.children.filter((child) => child.play == columnId)[0];
-          root.parent = null;
-          console.log(root);
-        }
-      } else {
-        placeInGrid(columnId);
-      }
-    });
-
-    $column.addEventListener("mouseenter", () => {
-      const columnId = $column.getAttribute("data-column-id");
-      pointerColumn = parseInt(columnId);
-      updatePlayerPointer(currentPlayer, pointerColumn);
-    });
+  $column.addEventListener("mouseenter", () => {
+    const columnId = $column.getAttribute("data-column-id");
+    pointerColumn = parseInt(columnId);
+    updatePlayerPointer(currentPlayer, pointerColumn);
   });
 });
