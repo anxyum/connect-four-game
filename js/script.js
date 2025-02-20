@@ -447,6 +447,7 @@ function updateWinner(winner) {
     firstPlayer = -firstPlayer;
     currentPlayer = firstPlayer;
     updatePlayerTurn(currentPlayer);
+    paused = true;
   }
 }
 
@@ -466,9 +467,10 @@ function placeInGrid(column) {
 }
 
 class EstimationNode {
-  constructor(grid, player, depth, parent, play) {
+  constructor(grid, player, currentPlayer, depth, parent, play) {
     this.parent = parent;
     this.grid = grid;
+    this.currentPlayer = currentPlayer;
     this.player = player;
     this.play = play;
     this.depth = depth;
@@ -491,33 +493,46 @@ class EstimationNode {
       return;
     }
 
-    const childValues = this.children.map((child) => child.value);
+    const childValues = this.children.map((child) => child.value || 0);
     if (childValues.length === 0) {
       return;
     }
-    let value = childValues.reduce((a, b) => a + b);
-    if (value > 0) {
-      value =
-        childValues.reduce((a, b) => {
-          if (b > 0) {
-            return a + b;
-          } else {
-            return a;
-          }
-        }) / childValues.length;
-    } else if (value < 0) {
-      value =
-        childValues.reduce((a, b) => {
-          if (b < 0) {
-            return a + b;
-          } else {
-            return a;
-          }
-        }) / childValues.length;
+
+    if (this.player === this.currentPlayer) {
+      if (this.currentPlayer === 1) {
+        this.value = Math.max(...childValues);
+      } else {
+        this.value = Math.min(...childValues);
+      }
     } else {
-      value = 0;
+      let value; // = childValues.reduce((a, b) => a + b)
+      if (this.currentPlayer === 1) {
+        value = Math.min(...childValues);
+        if (value > 0) {
+          value =
+            childValues.reduce((a, b) => {
+              if (b > 0) {
+                return a + b;
+              } else {
+                return a;
+              }
+            }) / childValues.length;
+        }
+      } else {
+        value = Math.max(...childValues);
+        if (value < 0) {
+          value =
+            childValues.reduce((a, b) => {
+              if (b < 0) {
+                return a + b;
+              } else {
+                return a;
+              }
+            }) / childValues.length;
+        }
+      }
+      this.value = value;
     }
-    this.value = value;
     if (this.parent !== null && currentValue !== this.value) {
       this.parent.reCalculateValue();
     }
@@ -526,7 +541,7 @@ class EstimationNode {
 }
 
 function estimateBoardValue(grid, player, maxTime) {
-  const root = new EstimationNode(grid, player, 0, null, null);
+  const root = new EstimationNode(grid, -1, player, 0, null, null);
   const queue = [root];
   const startTime = Date.now();
   let currentNode = root;
@@ -541,19 +556,23 @@ function estimateBoardValue(grid, player, maxTime) {
     for (let i = 0; i < 7; i++) {
       if (currentNode.grid[i].length < 6) {
         const childGrid = structuredClone(currentNode.grid);
-        childGrid[i].push(currentNode.player);
+        childGrid[i].push(currentNode.currentPlayer);
         const childNode = new EstimationNode(
           childGrid,
-          -currentNode.player,
+          currentNode.player,
+          -currentNode.currentPlayer,
           currentNode.depth + 1,
           currentNode,
           i
         );
         currentNode.children.push(childNode);
-        queue.push(childNode);
+        if (childNode.value === null) {
+          queue.push(childNode);
+        }
       }
     }
   }
+  console.log(root);
   return root;
 }
 
@@ -565,7 +584,9 @@ function continueEstimation(root, maxTime) {
   function addToQueueRecursively(node) {
     if (!node) console.log(node);
     if (node.children.length === 0) {
-      queue.push(node);
+      if (node.value === null) {
+        queue.push(node);
+      }
     } else {
       node.children.forEach((child) => {
         addToQueueRecursively(child);
@@ -574,7 +595,7 @@ function continueEstimation(root, maxTime) {
   }
 
   addToQueueRecursively(root);
-  
+
   while (queue.length > 0) {
     currentNode = queue.shift();
     if (currentNode.value !== null) {
@@ -586,19 +607,23 @@ function continueEstimation(root, maxTime) {
     for (let i = 0; i < 7; i++) {
       if (currentNode.grid[i].length < 6) {
         const childGrid = structuredClone(currentNode.grid);
-        childGrid[i].push(currentNode.player);
+        childGrid[i].push(currentNode.currentPlayer);
         const childNode = new EstimationNode(
           childGrid,
-          -currentNode.player,
+          currentNode.player,
+          -currentNode.currentPlayer,
           currentNode.depth + 1,
           currentNode,
           i
         );
         currentNode.children.push(childNode);
-        queue.push(childNode);
+        if (childNode.value === null) {
+          queue.push(childNode);
+        }
       }
     }
   }
+  console.log(root);
 }
 
 function chooseBestMove(root, player) {
@@ -715,6 +740,7 @@ document.addEventListener("DOMContentLoaded", () => {
       .querySelector(".game-screen-winner-container")
       .classList.add("hidden");
     resetGrid();
+    paused = false;
   });
 
   $gridColumns.forEach(($column) => {
