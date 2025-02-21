@@ -83,8 +83,10 @@ let pointerColumn = 0;
 let winnerDivs = [];
 let gameTree = null;
 let soloGame = false;
-let root = null;
 let paused = false;
+
+let requestId = 0;
+const pendingRequests = new Map();
 
 function redrawGrid(grid) {
   for (let i = 0; i < grid.length; i++) {
@@ -111,74 +113,6 @@ function drawColumn(grid, columnId) {
       }[column[i]]
     );
   }
-}
-
-function checkWin(grid) {
-  let perfCounter = 0;
-
-  // verifie les lignes
-  for (let i = 0; i < grid[3].length; i++) {
-    for (let j = 0; j < 4; j++) {
-      perfCounter++;
-      if (
-        grid[j][i] === grid[j + 1][i] &&
-        grid[j + 1][i] === grid[j + 2][i] &&
-        grid[j + 2][i] === grid[j + 3][i]
-      ) {
-        return grid[j][i] + 2;
-      }
-    }
-  }
-
-  const gridHeight = Math.max(...grid.map((column) => column.length));
-  if (gridHeight < 4) return -1;
-
-  // verifie les colonnes
-  for (let i = 0; i < grid.length; i++) {
-    const column = grid[i];
-    if (column.length < 4) continue;
-    for (let j = 0; j < column.length - 3; j++) {
-      perfCounter++;
-      if (
-        column[j] === column[j + 1] &&
-        column[j + 1] === column[j + 2] &&
-        column[j + 2] === column[j + 3]
-      )
-        return column[j] + 2;
-    }
-  }
-
-  // verifie les diagonales
-  for (let i = 0; i < 4; i++) {
-    for (let j = 0; j < gridHeight - 3; j++) {
-      perfCounter++;
-      if (
-        grid[i][j] &&
-        grid[i][j] === grid[i + 1][j + 1] &&
-        grid[i + 1][j + 1] === grid[i + 2][j + 2] &&
-        grid[i + 2][j + 2] === grid[i + 3][j + 3]
-      ) {
-        return grid[i][j] + 2;
-      }
-    }
-  }
-  for (let i = 0; i < 4; i++) {
-    for (let j = 3; j < gridHeight; j++) {
-      perfCounter++;
-      if (
-        grid[i][j] &&
-        grid[i][j] === grid[i + 1][j - 1] &&
-        grid[i + 1][j - 1] === grid[i + 2][j - 2] &&
-        grid[i + 2][j - 2] === grid[i + 3][j - 3]
-      ) {
-        return grid[i][j] + 2;
-      }
-    }
-  }
-
-  if (grid.flat().length === 42) return 0;
-
-  return -1;
 }
 
 function findWin(grid) {
@@ -333,7 +267,7 @@ function resetGrid() {
     if (currentPlayer === -1) {
       placeInGrid(3);
     }
-    root = initializeEstimations(gameGrid, -1, 1, 1000);
+    initializeEstimation(gameGrid, -1, 1, 1000);
   }
 }
 
@@ -417,7 +351,6 @@ function updateWinner(winner) {
     truc1[winner]();
 
     $playerClockContainer.classList.add("hidden");
-    console.log("winner");
     document
       .querySelector(".game-screen-winner-container")
       .classList.remove("hidden");
@@ -427,7 +360,6 @@ function updateWinner(winner) {
       const $cell = $gridColumns[cell.x].querySelectorAll(
         ".game-screen-grid__cell"
       )[5 - cell.y];
-      console.log($cell);
       const $div = document.createElement("div");
       $div.classList.add("game-screen-grid__cell-wrapper");
       $div.innerHTML = `<svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="17" cy="17" r="14" stroke="white" stroke-width="6" fill="none"/></svg>`;
@@ -466,141 +398,38 @@ function placeInGrid(column) {
   return false;
 }
 
-class EstimationNode {
-  constructor(grid, player, currentPlayer, depth, parent, play) {
-    this.parent = parent;
-    this.grid = grid;
-    this.currentPlayer = currentPlayer;
-    this.player = player;
-    this.play = play;
-    this.depth = depth;
-    this.children = [];
-    this.value = null;
-    const gridValue = checkWin(grid);
-    if (gridValue === 0) {
-      this.value = 0;
-    } else if (gridValue > 0) {
-      this.value = gridValue - 2;
-    }
-    if (this.value !== null && this.parent !== null) {
-      this.parent.reCalculateValue();
-    }
+const estimationWorker = new Worker("js/estimationWorker.js");
+
+estimationWorker.onmessage = (e) => {
+  const { id, data } = e.data;
+  if (pendingRequests.has(id)) {
+    pendingRequests.get(id)(data);
+    pendingRequests.delete(id);
   }
+};
 
-  reCalculateValue() {
-    const currentValue = this.value;
-    const childValues = this.children.map((child) => child.value || 0);
-
-    if (childValues.length === 0) {
-      return;
-    }
-
-    if (this.currentPlayer === this.player) {
-      if (this.currentPlayer === 1) {
-        this.value = Math.max(...childValues);
-      } else {
-        this.value = Math.min(...childValues);
-      }
-    } else {
-      if (this.currentPlayer === 1) {
-        this.value = Math.min(...childValues);
-      } else {
-        this.value = Math.max(...childValues);
-      }
-    }
-
-    if (this.value === Infinity) {
-      console.log("Infinity");
-      console.log(childValues);
-      console.log(this);
-      return;
-    }
-
-    if (this.parent !== null && this.value !== currentValue) {
-      this.parent.reCalculateValue();
-    }
-  }
-
-  continueEstimation(maxTime) {
-    const startTime = Date.now();
-    const queue = [];
-
-    function enqueue(node) {
-      if (node.children.length === 0) {
-        queue.push(node);
-      } else {
-        node.children.forEach((child) => {
-          enqueue(child);
-        });
-      }
-    }
-
-    enqueue(this);
-    queue.sort((a, b) => a.depth - b.depth);
-
-    while (queue.length > 0 && Date.now() - startTime < maxTime) {
-      const node = queue.shift();
-      if (node.value === null) {
-        for (let i = 0; i < 7; i++) {
-          const childGrid = structuredClone(node.grid);
-          if (childGrid[i].length < 6) {
-            childGrid[i].push(node.currentPlayer);
-            const childNode = new EstimationNode(
-              childGrid,
-              node.player,
-              -node.currentPlayer,
-              node.depth + 1,
-              node,
-              i
-            );
-            node.children.push(childNode);
-            queue.push(childNode);
-          }
-        }
-      }
-    }
-  }
-
-  chooseBestMove() {
-    if (this.currentPlayer === 1) {
-      return this.children.reduce((bestChild, child) => {
-        return child.value > bestChild.value ? child : bestChild;
-      }).play;
-    } else {
-      return this.children.reduce((bestChild, child) => {
-        return child.value < bestChild.value ? child : bestChild;
-      }).play;
-    }
-  }
+function postMessageWithPromise(type, args) {
+  return new Promise((resolve) => {
+    const id = requestId++;
+    pendingRequests.set(id, resolve);
+    estimationWorker.postMessage({ id, type, args });
+  });
 }
 
-function initializeEstimations(grid, player, currentPlayer, maxTime) {
-  const startTime = Date.now();
-  const root = new EstimationNode(grid, player, currentPlayer, 0, null, null);
-  const queue = [root];
+function initializeEstimation(...args) {
+  return postMessageWithPromise("initializeEstimation", args);
+}
 
-  while (queue.length > 0 && Date.now() - startTime < maxTime) {
-    const node = queue.shift();
-    if (node.value === null) {
-      for (let i = 0; i < 7; i++) {
-        const childGrid = structuredClone(node.grid);
-        if (childGrid[i].length < 6) {
-          childGrid[i].push(node.currentPlayer);
-          const childNode = new EstimationNode(
-            childGrid,
-            node.player,
-            -node.currentPlayer,
-            node.depth + 1,
-            node,
-            i
-          );
-          node.children.push(childNode);
-          queue.push(childNode);
-        }
-      }
-    }
-  }
-  return root;
+function continueEstimation(...args) {
+  return postMessageWithPromise("continueEstimation", args);
+}
+
+function getBestMove(...args) {
+  return postMessageWithPromise("chooseBestMove", args);
+}
+
+function updateEstimation(...args) {
+  return postMessageWithPromise("play", args);
 }
 
 document.addEventListener("keydown", (e) => {
@@ -636,7 +465,7 @@ $playVsCpuButton.addEventListener("click", () => {
 
   soloGame = true;
   resetGame();
-  root = initializeEstimations(gameGrid, -1, 1, 1000);
+  initializeEstimation(gameGrid, -1, 1, 1000);
 });
 
 $playVsPlayerButton.addEventListener("click", () => {
@@ -712,26 +541,17 @@ $playAgainButton.addEventListener("click", () => {
 $gridColumns.forEach(($column) => {
   $column.addEventListener("click", () => {
     let columnId = $column.getAttribute("data-column-id");
-    if (soloGame) {
+    if (soloGame && currentPlayer === 1) {
       if (placeInGrid(columnId) && winner === -1) {
-        try {
-          root = root.children.filter((child) => child.play == columnId)[0];
-          root.parent = null;
-          try {
-            worker.postMessage(root.continueEstimation, 1000);
-          } catch (error) {
-            console.log(error);
-          }
-          columnId = root.chooseBestMove();
-          placeInGrid(columnId);
-          root = root.children.filter((child) => child.play == columnId)[0];
-          root.parent = null;
-          console.log(root);
-        } catch (error) {
-          console.log(error);
-        }
+        updateEstimation(columnId)
+          .then(() => continueEstimation(3000))
+          .then(() => getBestMove())
+          .then((columnId) => {
+            placeInGrid(columnId);
+            return updateEstimation(columnId);
+          });
       }
-    } else {
+    } else if (!soloGame) {
       placeInGrid(columnId);
     }
   });
