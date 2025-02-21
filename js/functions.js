@@ -170,35 +170,28 @@ self.chooseBestMove = function (node) {
 };
 
 self.reCalculateValue = function (node) {
-  const currentValue = node.value;
-  const childValues = node.children.map((child) => child.value || 0);
+  const childValues = node.children.map((child) =>
+    child.value === null ? 0 : child.value
+  );
+  if (childValues.length === 0) return;
 
-  if (childValues.length === 0) {
-    return;
-  }
+  const average =
+    childValues.reduce((sum, value) => sum + value, 0) / childValues.length;
 
-  if (node.currentPlayer === node.player) {
-    if (node.currentPlayer === 1) {
-      node.value = Math.max(...childValues);
-    } else {
-      node.value = Math.min(...childValues);
-    }
+  let bestValue;
+  if (node.player === 1) {
+    bestValue = Math.max(...childValues);
   } else {
-    if (node.currentPlayer === 1) {
-      node.value = Math.min(...childValues);
-    } else {
-      node.value = Math.max(...childValues);
+    bestValue = Math.min(...childValues);
+  }
+
+  const weight = node.currentPlayer === node.player ? 0.9 : 0;
+  const newValue = weight * bestValue + (1 - weight) * average;
+
+  if (node.value !== newValue) {
+    node.value = newValue;
+    if (node.parent) {
+      reCalculateValue(node.parent);
     }
-  }
-
-  if (node.value === Infinity) {
-    console.log("Infinity");
-    console.log(childValues);
-    console.log(node);
-    return;
-  }
-
-  if (node.parent !== null && node.value !== currentValue) {
-    reCalculateValue(node.parent);
   }
 };
