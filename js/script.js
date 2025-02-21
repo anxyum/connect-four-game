@@ -1,4 +1,4 @@
-const $playVsPlayerButton = document.querySelector(
+;const $playVsPlayerButton = document.querySelector(
   ".main-menu-buttons__button--primary"
 );
 const $playVsCpuButton = document.querySelector(
@@ -72,6 +72,7 @@ const $playerClockPlayer = document.querySelector(
 // console.log($playAgainButton);
 // console.log($playerClockContainer);
 // console.log($playerClock);
+// console.log($playerClockPlayer);
 
 const defaultGrid = [[], [], [], [], [], [], []];
 let gameGrid = structuredClone(defaultGrid);
@@ -429,7 +430,7 @@ function getBestMove(...args) {
 }
 
 function updateEstimation(...args) {
-  return postMessageWithPromise("play", args);
+  return postMessageWithPromise("placeInGrid", args);
 }
 
 document.addEventListener("keydown", (e) => {

@@ -12,9 +12,9 @@ self.onmessage = function (event) {
       continueEstimation(root, ...args);
       self.postMessage({ id });
       break;
-    case "play":
+    case "placeInGrid":
       root.children.forEach((child) => {
-        if (child.play === args[0]) {
+        if (child.play == args[0]) {
           root = child;
           root.parent = null;
         }
