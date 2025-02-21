@@ -1,4 +1,4 @@
-;const $playVsPlayerButton = document.querySelector(
+const $playVsPlayerButton = document.querySelector(
   ".main-menu-buttons__button--primary"
 );
 const $playVsCpuButton = document.querySelector(
@@ -19,7 +19,8 @@ for (let i = 0; i < 7; i++) {
   for (let j = 0; j < 6; j++) {
     const $cell = document.createElement("li");
     $cell.innerHTML =
-      '<div class="game-screen-grid__cell-wrapper"><svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" > <g id="Oval Copy 43" filter="url(#filter0_i_5_6369)"> <circle cx="32" cy="32" r="32" /> </g> <defs> <filter id="filter0_i_5_6369" x="0" y="0" width="64" height="64" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB" > <feFlood flood-opacity="0" result="BackgroundImageFix" /> <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" /> <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha" /> <feOffset dy="5" /> <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1" /> <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0" /> <feBlend mode="normal" in2="shape" result="effect1_innerShadow_5_6369" /> </filter> </defs> </svg></div>';
+      '<div class="game-screen-grid__cell-wrapper"><svg style="z-index: -1" width="64" height="64" viewBox="0 0 64 64" fill="#7945FF" xmlns="http://www.w3.org/2000/svg" > <g id="Oval Copy 43" filter="url(#filter0_i_5_6370)"> <circle cx="32" cy="32" r="32" /> </g> <defs> <filter id="filter0_i_5_6370" x="0" y="0" width="64" height="64" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB" > <feFlood flood-opacity="0" result="BackgroundImageFix" /> <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" /> <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha" /> <feOffset dy="10" /> <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1" /> <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0" /> <feBlend mode="normal" in2="shape" result="effect1_innerShadow_5_6369" /> </filter> </defs> </svg></div>' +
+      '<div class="game-screen-grid__cell-wrapper"><svg style="z-index: 1" width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" > <g id="Oval Copy 43" filter="url(#filter0_i_5_6369)"> <circle cx="32" cy="32" r="32" /> </g> <defs> <filter id="filter0_i_5_6369" x="0" y="0" width="64" height="64" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB" > <feFlood flood-opacity="0" result="BackgroundImageFix" /> <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" /> <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha" /> <feOffset dy="5" /> <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1" /> <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0" /> <feBlend mode="normal" in2="shape" result="effect1_innerShadow_5_6369" /> </filter> </defs> </svg></div>';
     $cell.classList.add("game-screen-grid__cell");
     $column.appendChild($cell);
   }
@@ -79,7 +80,7 @@ let gameGrid = structuredClone(defaultGrid);
 let currentPlayer = 1;
 let firstPlayer = 1;
 let winner = 0;
-const maxTurnTime = 30; // en secondes
+const maxTurnTime = 60; // en secondes
 let pointerColumn = 0;
 let winnerDivs = [];
 let gameTree = null;

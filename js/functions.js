@@ -179,13 +179,13 @@ self.reCalculateValue = function (node) {
     childValues.reduce((sum, value) => sum + value, 0) / childValues.length;
 
   let bestValue;
-  if (node.player === 1) {
+  if (node.currentPlayer === 1) {
     bestValue = Math.max(...childValues);
   } else {
     bestValue = Math.min(...childValues);
   }
 
-  const weight = node.currentPlayer === node.player ? 0.9 : 0;
+  const weight = node.currentPlayer === node.player ? 0.9 : 0.1;
   const newValue = weight * bestValue + (1 - weight) * average;
 
   if (node.value !== newValue) {
